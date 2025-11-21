@@ -16,11 +16,11 @@ warnings.filterwarnings('ignore')
 
 def main():
     print("\n" + "="*70)
-    print("🏪 RETAIL DEMAND FORECASTING SYSTEM")
+    print(" RETAIL DEMAND FORECASTING SYSTEM")
     print("="*70 + "\n")
     
     # Step 1: Generate retail data
-    print("📊 Step 1/4: Generating retail sales data...")
+    print(" Step 1/4: Generating retail sales data...")
     print("   (2 years, 20 SKUs, 5 stores - this takes 2-3 minutes)\n")
     
     generator = RetailDataGenerator(seed=42)
@@ -34,7 +34,7 @@ def main():
     print(f"\n✓ Generated {len(sales_df):,} sales records")
     
     # Step 2: Generate supporting data
-    print("\n📦 Step 2/4: Generating inventory and external data...")
+    print("\n Step 2/4: Generating inventory and external data...")
     inventory_df = generator.generate_retail_inventory_snapshot(sales_df)
     
     # Aggregate sales by SKU and date
@@ -56,12 +56,12 @@ def main():
     print(f"✓ Generated inventory for {len(inventory_df)} SKU-Store combinations")
     
     # Step 3: Initialize agent
-    print("\n🤖 Step 3/4: Initializing forecasting agent...")
+    print("\n Step 3/4: Initializing forecasting agent...")
     agent = DemandForecastingAgent()
     print("✓ Agent initialized")
     
     # Step 4: Train models
-    print("\n🎓 Step 4/4: Training forecasting models...")
+    print("\n Step 4/4: Training forecasting models...")
     skus = sales_agg['sku_id'].unique()[:5]  # Train first 5 for quick startup
     
     for i, sku in enumerate(skus, 1):
@@ -87,10 +87,10 @@ def main():
     
     # Launch dashboard
     print("\n" + "="*70)
-    print("🚀 LAUNCHING DASHBOARD")
+    print("LAUNCHING DASHBOARD")
     print("="*70)
-    print("\n📈 Dashboard will open at: http://127.0.0.1:8050")
-    print("\n✨ Features:")
+    print("\n Dashboard will open at: http://127.0.0.1:8050")
+    print("\n Features:")
     print("   • Real-time demand forecasting")
     print("   • Dynamic reorder recommendations")
     print("   • Historical sales analysis")
@@ -106,10 +106,10 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("\n\n👋 Dashboard stopped. Goodbye!")
+        print("\n\n Dashboard stopped. Goodbye!")
         sys.exit(0)
     except Exception as e:
-        print(f"\n❌ Error: {e}")
+        print(f"\n Error: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)
