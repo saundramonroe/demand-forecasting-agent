@@ -281,13 +281,11 @@ class RetailDataGenerator:
     def _calculate_trend(self, date, date_range, base_demand):
         """Calculate long-term trend component."""
         days_elapsed = (date - date_range[0]).days
-        # Slight upward trend (0.05% per day)
         trend_factor = 1 + (0.0005 * days_elapsed)
         return base_demand * trend_factor
     
     def _calculate_seasonal_effect(self, date, category_info):
         """Calculate seasonal pattern based on time of year."""
-        # Strong seasonality for certain categories
         day_of_year = date.timetuple().tm_yday
         seasonal_component = category_info['seasonality_strength'] * 50 * \
                            np.sin(2 * np.pi * day_of_year / 365.25 + np.pi/2)
@@ -295,7 +293,7 @@ class RetailDataGenerator:
     
     def _calculate_weekly_pattern(self, date, category_info):
         """Calculate day-of-week effects."""
-        if date.dayofweek >= 5:  # Weekend (Friday=5, Saturday=6, Sunday=0)
+        if date.dayofweek >= 5:
             return 30 * (category_info['weekend_boost'] - 1)
         return 0
     
@@ -305,7 +303,6 @@ class RetailDataGenerator:
         
         for holiday, info in self.RETAIL_HOLIDAYS.items():
             if self._is_near_holiday(date, info):
-                # Some categories benefit more from certain holidays
                 category_multiplier = 1.0
                 if 'Christmas' in holiday and category in ['Toys & Games', 'Electronics']:
                     category_multiplier = 1.5
@@ -337,25 +334,21 @@ class RetailDataGenerator:
     
     def _is_promotion_day(self, date, sku_id):
         """Determine if product is on promotion (20% of days)."""
-        # Use SKU and date for consistent but pseudo-random promotions
         hash_val = hash(f"{sku_id}_{date.strftime('%Y%m%d')}") % 100
-        return hash_val < 20  # 20% promotion rate
+        return hash_val < 20
     
     def _calculate_weather_impact(self, date, category):
         """Calculate weather impact on demand."""
-        # Temperature effect (simplified sine wave)
         day_of_year = date.timetuple().tm_yday
         temp = 60 + 30 * np.sin(2 * np.pi * day_of_year / 365.25)
         
         weather_multiplier = 1.0
         
-        # Seasonal products
         if category == 'Sports & Outdoors':
-            weather_multiplier = 1.0 + (temp - 60) / 100  # Better in warm weather
+            weather_multiplier = 1.0 + (temp - 60) / 100
         elif category == 'Home & Garden':
             weather_multiplier = 1.0 + (temp - 50) / 80
         elif category == 'Apparel':
-            # Boost in spring and fall (clothing transitions)
             if date.month in [3, 4, 9, 10]:
                 weather_multiplier = 1.15
         
@@ -363,18 +356,14 @@ class RetailDataGenerator:
     
     def generate_retail_inventory_snapshot(self, sales_df):
         """Generate current inventory status for retail operations."""
-        
-        # Group by store and SKU
         inventory_data = []
         
         for (store_id, sku_id), group in sales_df.groupby(['store_id', 'sku_id']):
             avg_daily_sales = group['units_sold'].mean()
             
-            # Calculate stock levels
             weeks_of_stock = np.random.uniform(3, 8)
             current_stock = int(avg_daily_sales * 7 * weeks_of_stock)
             
-            # Reorder points based on lead time and variability
             lead_time_days = np.random.randint(5, 14)
             safety_factor = 1.5
             reorder_point = int(avg_daily_sales * lead_time_days * safety_factor)
@@ -387,7 +376,7 @@ class RetailDataGenerator:
                 'category': group['category'].iloc[0],
                 'current_stock': current_stock,
                 'reorder_point': reorder_point,
-                'reorder_quantity': int(avg_daily_sales * 14),  # 2 weeks supply
+                'reorder_quantity': int(avg_daily_sales * 14),
                 'lead_time_days': lead_time_days,
                 'unit_cost': group['cost'].iloc[0],
                 'unit_price': group['unit_price'].mean(),
@@ -408,23 +397,6 @@ class RetailDataGenerator:
             return 'Normal'
         else:
             return 'Overstocked'
-    
-    def generate_customer_data(self, sales_df, n_customers=500):
-        """Generate synthetic customer transaction data."""
-        customers = []
-        
-        for i in range(n_customers):
-            customers.append({
-                'customer_id': f'CUST_{i+1:05d}',
-                'loyalty_tier': np.random.choice(['Bronze', 'Silver', 'Gold', 'Platinum'], 
-                                                p=[0.5, 0.3, 0.15, 0.05]),
-                'join_date': sales_df['date'].min() + timedelta(days=np.random.randint(0, 365)),
-                'email_subscribed': np.random.choice([True, False], p=[0.6, 0.4]),
-                'preferred_channel': np.random.choice(['In-Store', 'Online', 'Mobile App'], 
-                                                     p=[0.5, 0.3, 0.2])
-            })
-        
-        return pd.DataFrame(customers)
     
     def generate_summary_statistics(self, sales_df):
         """Generate summary statistics for retail data."""
