@@ -100,7 +100,7 @@ def main():
     print("="*70 + "\n")
     
     dashboard = ForecastingDashboard(agent, sales_agg, external_df, inv_summary)
-    dashboard.run(host='127.0.0.1', port=8050, debug=False)
+    dashboard.run(host='127.0.0.1', port=8051, debug=False)
 
 if __name__ == "__main__":
     try:
