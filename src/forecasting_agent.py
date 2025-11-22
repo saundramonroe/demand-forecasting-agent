@@ -20,6 +20,7 @@ class DemandForecastingAgent:
         self.scalers = {}
         self.forecast_accuracy = {}
         self.learning_history = []
+        self.feature_columns = {}
         
     def prepare_features(self, sales_df, external_df=None):
         """
@@ -63,6 +64,7 @@ class DemandForecastingAgent:
         
         # Merge external factors if provided
         if external_df is not None:
+            external_df = external_df.copy()
             external_df['date'] = pd.to_datetime(external_df['date'])
             df = df.merge(external_df, on='date', how='left')
         
@@ -90,7 +92,7 @@ class DemandForecastingAgent:
         if len(sku_data) < 30:
             raise ValueError(f"Insufficient data for {sku_id}. Need at least 30 records.")
         
-        # Define features and target
+        # Define base features
         feature_cols = [
             'dayofweek', 'day', 'month', 'quarter', 'dayofyear', 'weekofyear',
             'is_weekend', 'is_holiday_season', 'is_summer',
@@ -98,10 +100,19 @@ class DemandForecastingAgent:
             'sales_rolling_7', 'sales_rolling_30', 'sales_std_7'
         ]
         
-        # Add external factors if available
+        # Add external factors if available (only columns that exist)
         if external_df is not None:
-            external_cols = ['is_holiday', 'promotion_active']
-            feature_cols.extend([col for col in external_cols if col in sku_data.columns])
+            potential_external_cols = ['temperature', 'economic_index', 'promotion_active', 
+                                      'competitor_price_index', 'is_holiday']
+            for col in potential_external_cols:
+                if col in sku_data.columns:
+                    feature_cols.append(col)
+        
+        # Ensure all feature columns exist
+        feature_cols = [col for col in feature_cols if col in sku_data.columns]
+        
+        # Store feature columns for this SKU
+        self.feature_columns[sku_id] = feature_cols
         
         X = sku_data[feature_cols]
         y = sku_data['sales']
@@ -191,17 +202,38 @@ class DemandForecastingAgent:
         future_df['sales_rolling_30'] = recent_avg
         future_df['sales_std_7'] = recent_avg * 0.2
         
-        # Merge external factors
+        # Merge external factors if provided
         if external_factors is not None:
+            external_factors = external_factors.copy()
             external_factors['date'] = pd.to_datetime(external_factors['date'])
             future_df = future_df.merge(external_factors, on='date', how='left')
         
-        # Ensure all required features are present
-        feature_cols = [col for col in future_df.columns if col != 'date']
-        future_df = future_df.fillna(0)
+        # Use the exact features the model was trained on
+        if sku_id in self.feature_columns:
+            expected_features = self.feature_columns[sku_id]
+            
+            # Add missing features with zero values
+            for col in expected_features:
+                if col not in future_df.columns:
+                    future_df[col] = 0
+            
+            # Select features in the correct order
+            X_future = future_df[expected_features]
+        else:
+            # Fallback to base features
+            base_features = [
+                'dayofweek', 'day', 'month', 'quarter', 'dayofyear', 'weekofyear',
+                'is_weekend', 'is_holiday_season', 'is_summer',
+                'sales_lag_7', 'sales_lag_14', 'sales_lag_30',
+                'sales_rolling_7', 'sales_rolling_30', 'sales_std_7'
+            ]
+            available_features = [col for col in base_features if col in future_df.columns]
+            X_future = future_df[available_features]
+        
+        # Fill any remaining NaN values
+        X_future = X_future.fillna(0)
         
         # Make predictions
-        X_future = future_df[feature_cols]
         X_future_scaled = scaler.transform(X_future)
         predictions = model.predict(X_future_scaled)
         

@@ -1,36 +1,57 @@
 """
 Load and manage Qwen2.5 models for demand forecasting analysis.
+Supports both local and Hugging Face hosted models.
 """
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import os
+import requests
+import json
 
 class ModelLoader:
     """Load and manage Qwen2.5 models as recommended in the document."""
     
     # Model options from the document
     MODELS = {
-        'qwen2.5-32b': 'Qwen/Qwen2.5-32B-Instruct',
-        'qwen2.5-14b': 'Qwen/Qwen2.5-14B-Instruct',
         'qwen2.5-7b': 'Qwen/Qwen2.5-7B-Instruct',
         'llama-3.1-8b': 'meta-llama/Meta-Llama-3.1-8B-Instruct'
     }
     
-    def __init__(self, model_name='qwen2.5-7b', device=None):
+    def __init__(self, model_name='qwen2.5-7b', device=None, use_local=False, local_endpoint='http://127.0.0.1:8080'):
         """
         Initialize model loader.
         
         Args:
             model_name: Name of the model to load (from MODELS dict)
-            device: Device to load model on (cuda/cpu)
+            device: Device to load model on (cuda/cpu) - only used if not using local
+            use_local: If True, use local model server instead of loading model
+            local_endpoint: URL of local model server (e.g., 'http://127.0.0.1:8080')
         """
         self.model_name = model_name
         self.device = device or ('cuda' if torch.cuda.is_available() else 'cpu')
+        self.use_local = use_local
+        self.local_endpoint = local_endpoint.rstrip('/')
         self.model = None
         self.tokenizer = None
         
     def load_model(self):
         """Load the specified model and tokenizer."""
+        if self.use_local:
+            print(f" Using local model at {self.local_endpoint}")
+            print("  No model download required - using local inference server")
+            # Test connection
+            try:
+                response = requests.get(f"{self.local_endpoint}/health", timeout=5)
+                if response.status_code == 200:
+                    print(" Local model server is responsive")
+                else:
+                    print("  Warning: Could not verify local model server")
+            except requests.exceptions.RequestException:
+                print(" Warning: Could not connect to local model server")
+                print(f"   Make sure your model is running at {self.local_endpoint}")
+            return self
+        
+        # Original Hugging Face loading
         if self.model_name not in self.MODELS:
             raise ValueError(f"Model {self.model_name} not found. Available: {list(self.MODELS.keys())}")
         
@@ -71,6 +92,9 @@ class ModelLoader:
         Returns:
             Generated text
         """
+        if self.use_local:
+            return self._generate_local(prompt, max_length, temperature)
+        
         if self.model is None or self.tokenizer is None:
             raise RuntimeError("Model not loaded. Call load_model() first.")
         
@@ -110,6 +134,70 @@ class ModelLoader:
             response = generated_text[len(text):].strip()
         
         return response
+    
+    def _generate_local(self, prompt, max_length=1024, temperature=0.7):
+        """
+        Generate using local model server.
+        
+        Args:
+            prompt: Input prompt
+            max_length: Max tokens to generate
+            temperature: Sampling temperature
+            
+        Returns:
+            Generated text
+        """
+        try:
+            # Prepare request for local model
+            payload = {
+                "prompt": prompt,
+                "max_tokens": max_length,
+                "temperature": temperature,
+                "top_p": 0.9,
+                "stream": False
+            }
+            
+            # Try different common endpoints
+            endpoints = [
+                f"{self.local_endpoint}/v1/completions",
+                f"{self.local_endpoint}/v1/chat/completions",
+                f"{self.local_endpoint}/api/generate",
+                f"{self.local_endpoint}/generate"
+            ]
+            
+            for endpoint in endpoints:
+                try:
+                    response = requests.post(
+                        endpoint,
+                        json=payload,
+                        headers={"Content-Type": "application/json"},
+                        timeout=60
+                    )
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        
+                        # Try to extract text from various response formats
+                        if 'choices' in data and len(data['choices']) > 0:
+                            if 'text' in data['choices'][0]:
+                                return data['choices'][0]['text'].strip()
+                            elif 'message' in data['choices'][0]:
+                                return data['choices'][0]['message']['content'].strip()
+                        elif 'response' in data:
+                            return data['response'].strip()
+                        elif 'text' in data:
+                            return data['text'].strip()
+                        else:
+                            return str(data)
+                    
+                except requests.exceptions.RequestException:
+                    continue
+            
+            # If all endpoints fail
+            raise RuntimeError(f"Could not connect to local model at {self.local_endpoint}")
+            
+        except Exception as e:
+            raise RuntimeError(f"Error calling local model: {e}")
     
     def analyze_forecast(self, historical_data, forecast_data, external_factors):
         """
@@ -160,6 +248,10 @@ Keep the analysis concise and actionable.
     
     def unload_model(self):
         """Unload model to free memory."""
+        if self.use_local:
+            print("Using local model - no memory to free")
+            return
+        
         if self.model is not None:
             del self.model
             del self.tokenizer

@@ -1,4 +1,5 @@
 
+#!/usr/bin/env python3
 """
 Test script for retail data generation.
 Place this file in the ROOT directory of your project.
@@ -12,10 +13,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
 from retail_data_generator import RetailDataGenerator
 import pandas as pd
+import numpy as np
 
 def main():
     print("\n" + "="*70)
-    print("🧪 RETAIL DATA GENERATOR TEST")
+    print(" RETAIL DATA GENERATOR TEST")
     print("="*70 + "\n")
     
     # Initialize generator
@@ -47,7 +49,7 @@ def main():
     
     # Display results
     print("\n" + "="*70)
-    print(" RETAIL SALES SUMMARY")
+    print("RETAIL SALES SUMMARY")
     print("="*70 + "\n")
     
     print(" REVENUE METRICS:")
@@ -108,18 +110,28 @@ def main():
     
     # Save summary as JSON
     import json
+    
+    # Convert non-serializable types properly
+    summary_clean = {}
+    for k, v in summary.items():
+        if isinstance(v, (list, pd.Timestamp)):
+            summary_clean[k] = str(v)
+        elif isinstance(v, (np.integer, np.int64, np.int32)):
+            summary_clean[k] = int(v)
+        elif isinstance(v, (np.floating, np.float64, np.float32)):
+            summary_clean[k] = float(v)
+        else:
+            summary_clean[k] = v
+    
     with open('data/test_summary.json', 'w') as f:
-        # Convert non-serializable types
-        summary_clean = {k: (str(v) if isinstance(v, (list, pd.Timestamp)) else v) 
-                        for k, v in summary.items()}
         json.dump(summary_clean, f, indent=2)
     print("✓ Saved: data/test_summary.json")
     
     print("\n" + "="*70)
-    print("TEST COMPLETE - All systems working!")
+    print(" TEST COMPLETE - All systems working!")
     print("="*70 + "\n")
     
-    print("🎯 NEXT STEPS:")
+    print(" NEXT STEPS:")
     print("   1. Check the generated CSV files in data/ directory")
     print("   2. Run the full notebook: jupyter notebook notebooks/retail_forecasting_demo.ipynb")
     print("   3. Launch the dashboard: python run_retail_dashboard.py")
