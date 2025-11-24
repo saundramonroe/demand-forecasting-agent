@@ -762,66 +762,125 @@ Recommended reanalysis: {(datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d
     
     def _create_risk_assessment(self, reorder_info, forecast_df, inv_info):
         """Create comprehensive risk assessment panel."""
-        # Calculate risk scores
-        stockout_risk = min(100, max(0, 100 - (reorder_info['days_until_stockout'] / int(inv_info['lead_time_days']) * 100)))
-        overstock_risk = 50 if reorder_info['current_stock'] > reorder_info['reorder_point'] * 2 else 25
-        forecast_uncertainty = forecast_df['predicted_demand'].std() / forecast_df['predicted_demand'].mean() * 100
+        # Calculate risk scores (0-100%)
+        
+        # Stockout Risk: Based on days until stockout vs lead time
+        lead_time = int(inv_info['lead_time_days'])
+        days_until_stockout = reorder_info['days_until_stockout']
+        
+        if days_until_stockout <= lead_time:
+            stockout_risk = 90  # Critical - will stockout before reorder arrives
+        elif days_until_stockout <= lead_time * 1.5:
+            stockout_risk = 60  # High - tight timeline
+        elif days_until_stockout <= lead_time * 2:
+            stockout_risk = 35  # Moderate - some buffer
+        else:
+            stockout_risk = 10  # Low - adequate coverage
+        
+        # Overstock Risk: Based on current stock vs reorder point
+        stock_ratio = reorder_info['current_stock'] / max(1, reorder_info['reorder_point'])
+        if stock_ratio > 3:
+            overstock_risk = 80  # High overstock
+        elif stock_ratio > 2:
+            overstock_risk = 50  # Moderate overstock
+        elif stock_ratio > 1.5:
+            overstock_risk = 25  # Slight overstock
+        else:
+            overstock_risk = 10  # Optimal level
+        
+        # Forecast Uncertainty: Based on coefficient of variation
+        forecast_mean = forecast_df['predicted_demand'].mean()
+        forecast_std = forecast_df['predicted_demand'].std()
+        cv = (forecast_std / forecast_mean * 100) if forecast_mean > 0 else 0
+        forecast_uncertainty = min(100, cv)
         
         return dbc.Row([
             dbc.Col([
                 html.Div([
-                    html.H6([html.I(className="fas fa-times-circle me-2"), "Stockout Risk"], className="mb-3"),
+                    html.Div([
+                        html.I(className="fas fa-times-circle fa-2x mb-3", 
+                              style={'color': '#dc3545' if stockout_risk > 60 else '#ffc107' if stockout_risk > 30 else '#28a745'}),
+                        html.H6("Stockout Risk", className="mb-3 fw-bold")
+                    ], className="text-center"),
                     dbc.Progress(
                         value=stockout_risk,
                         label=f"{stockout_risk:.0f}%",
-                        color="danger" if stockout_risk > 70 else "warning" if stockout_risk > 40 else "success",
-                        className="mb-2",
-                        style={'height': '25px'}
+                        color="danger" if stockout_risk > 60 else "warning" if stockout_risk > 30 else "success",
+                        className="mb-3",
+                        style={'height': '30px', 'fontSize': '14px', 'fontWeight': 'bold'}
                     ),
-                    html.P(
-                        "LOW RISK - Adequate inventory coverage" if stockout_risk < 40 
-                        else "MODERATE RISK - Monitor closely" if stockout_risk < 70
-                        else "HIGH RISK - Immediate action required",
-                        className="small text-muted mb-0"
-                    )
-                ], className="p-3 bg-white rounded")
+                    html.Div([
+                        html.Strong(
+                            "🔴 HIGH RISK - Immediate action required" if stockout_risk > 60
+                            else "🟡 MODERATE RISK - Monitor closely" if stockout_risk > 30
+                            else "🟢 LOW RISK - Adequate coverage",
+                            className="d-block mb-2"
+                        ),
+                        html.Small([
+                            html.I(className="fas fa-info-circle me-1"),
+                            f"Days to stockout: {days_until_stockout} | Lead time: {lead_time} days"
+                        ], className="text-muted")
+                    ])
+                ], className="p-3 bg-white rounded shadow-sm")
             ], width=4),
+            
             dbc.Col([
                 html.Div([
-                    html.H6([html.I(className="fas fa-boxes me-2"), "Overstock Risk"], className="mb-3"),
+                    html.Div([
+                        html.I(className="fas fa-boxes fa-2x mb-3", 
+                              style={'color': '#ffc107' if overstock_risk > 50 else '#17a2b8'}),
+                        html.H6("Overstock Risk", className="mb-3 fw-bold")
+                    ], className="text-center"),
                     dbc.Progress(
                         value=overstock_risk,
                         label=f"{overstock_risk:.0f}%",
                         color="warning" if overstock_risk > 50 else "info",
-                        className="mb-2",
-                        style={'height': '25px'}
+                        className="mb-3",
+                        style={'height': '30px', 'fontSize': '14px', 'fontWeight': 'bold'}
                     ),
-                    html.P(
-                        "LOW RISK - Optimal stock levels" if overstock_risk < 30
-                        else "MODERATE RISK - Review order quantities",
-                        className="small text-muted mb-0"
-                    )
-                ], className="p-3 bg-white rounded")
+                    html.Div([
+                        html.Strong(
+                            "🟡 MODERATE RISK - Review order quantities" if overstock_risk > 50
+                            else "🟢 LOW RISK - Optimal stock levels",
+                            className="d-block mb-2"
+                        ),
+                        html.Small([
+                            html.I(className="fas fa-info-circle me-1"),
+                            f"Stock ratio: {stock_ratio:.1f}x reorder point | Current: {reorder_info['current_stock']:,} units"
+                        ], className="text-muted")
+                    ])
+                ], className="p-3 bg-white rounded shadow-sm")
             ], width=4),
+            
             dbc.Col([
                 html.Div([
-                    html.H6([html.I(className="fas fa-wave-square me-2"), "Demand Volatility"], className="mb-3"),
+                    html.Div([
+                        html.I(className="fas fa-wave-square fa-2x mb-3", 
+                              style={'color': '#17a2b8' if forecast_uncertainty < 30 else '#ffc107'}),
+                        html.H6("Demand Volatility", className="mb-3 fw-bold")
+                    ], className="text-center"),
                     dbc.Progress(
-                        value=min(100, forecast_uncertainty),
+                        value=forecast_uncertainty,
                         label=f"{forecast_uncertainty:.0f}%",
-                        color="info",
-                        className="mb-2",
-                        style={'height': '25px'}
+                        color="info" if forecast_uncertainty < 30 else "warning",
+                        className="mb-3",
+                        style={'height': '30px', 'fontSize': '14px', 'fontWeight': 'bold'}
                     ),
-                    html.P(
-                        "LOW - Predictable demand pattern" if forecast_uncertainty < 20
-                        else "MODERATE - Some variability expected" if forecast_uncertainty < 40
-                        else "HIGH - Significant uncertainty",
-                        className="small text-muted mb-0"
-                    )
-                ], className="p-3 bg-white rounded")
+                    html.Div([
+                        html.Strong(
+                            "🟢 LOW - Predictable demand pattern" if forecast_uncertainty < 20
+                            else "🟡 MODERATE - Some variability expected" if forecast_uncertainty < 40
+                            else "🔴 HIGH - Significant uncertainty",
+                            className="d-block mb-2"
+                        ),
+                        html.Small([
+                            html.I(className="fas fa-info-circle me-1"),
+                            f"Coefficient of variation: {cv:.1f}% | Std dev: {forecast_std:.1f} units"
+                        ], className="text-muted")
+                    ])
+                ], className="p-3 bg-white rounded shadow-sm")
             ], width=4)
-        ])
+        ], className="g-3")
     
     def _create_forecast_chart(self, forecast_df, inv_info, sku_id, sku_history):
         """Create comprehensive forecast visualization."""

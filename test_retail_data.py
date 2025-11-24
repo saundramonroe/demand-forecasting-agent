@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 """
 Test script for retail data generation.
@@ -7,6 +6,7 @@ Place this file in the ROOT directory of your project.
 
 import sys
 import os
+from datetime import datetime, timedelta
 
 # Ensure src directory is in path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
@@ -17,7 +17,7 @@ import numpy as np
 
 def main():
     print("\n" + "="*70)
-    print(" RETAIL DATA GENERATOR TEST")
+    print("🧪 RETAIL DATA GENERATOR TEST")
     print("="*70 + "\n")
     
     # Initialize generator
@@ -27,11 +27,18 @@ def main():
     
     # Generate sales data
     print("Step 2/4: Generating retail sales data...")
-    print("   (1 year, 10 SKUs, 3 stores - this takes ~30 seconds)\n")
+    
+    # Calculate realistic date range (last 1 year to today)
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=365)
+    days_to_generate = 365
+    
+    print(f"   Date range: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
+    print(f"   (1 year, 10 SKUs, 3 stores - this takes ~30 seconds)\n")
     
     sales_df = generator.generate_retail_sales_data(
-        start_date='2023-01-01',
-        periods=365,  # 1 year for quick test
+        start_date=start_date.strftime('%Y-%m-%d'),
+        periods=days_to_generate,
         n_skus=10,    # 10 products
         n_stores=3    # 3 stores
     )
@@ -49,53 +56,53 @@ def main():
     
     # Display results
     print("\n" + "="*70)
-    print("RETAIL SALES SUMMARY")
+    print("📊 RETAIL SALES SUMMARY")
     print("="*70 + "\n")
     
-    print(" REVENUE METRICS:")
+    print("💰 REVENUE METRICS:")
     print(f"   Total Revenue: ${summary['total_revenue']:,.2f}")
     print(f"   Avg Daily Revenue: ${summary['avg_daily_revenue']:,.2f}")
     print(f"   Avg Transaction Value: ${summary['avg_transaction_value']:.2f}")
     
-    print("\n OPERATIONS:")
+    print("\n📦 OPERATIONS:")
     print(f"   Total Units Sold: {summary['total_units_sold']:,}")
     print(f"   Stockout Rate: {summary['stockout_rate']:.2f}%")
     print(f"   Promotion Rate: {summary['promotion_rate']:.2f}%")
     
-    print("\n COVERAGE:")
+    print("\n🏪 COVERAGE:")
     print(f"   Total Stores: {summary['total_stores']}")
     print(f"   Total SKUs: {summary['total_skus']}")
     print(f"   Categories: {len(summary['categories'])}")
     print(f"   Date Range: {summary['date_range']}")
     
-    print("\n TOP PERFORMERS:")
+    print("\n🏆 TOP PERFORMERS:")
     print(f"   Best Category (Revenue): {summary['top_category_by_revenue']}")
     print(f"   Best Category (Units): {summary['top_category_by_units']}")
     
     print("\n" + "="*70 + "\n")
     
     # Display sample data
-    print(" SAMPLE SALES RECORDS (First 5):\n")
+    print("📋 SAMPLE SALES RECORDS (First 5):\n")
     print(sales_df.head().to_string())
     
-    print("\n\n SAMPLE INVENTORY RECORDS (First 5):\n")
+    print("\n\n📦 SAMPLE INVENTORY RECORDS (First 5):\n")
     print(inventory_df.head().to_string())
     
     # Category breakdown
-    print("\n\n REVENUE BY CATEGORY:\n")
+    print("\n\n📊 REVENUE BY CATEGORY:\n")
     category_revenue = sales_df.groupby('category')['revenue'].sum().sort_values(ascending=False)
     for category, revenue in category_revenue.items():
         print(f"   {category:<25} ${revenue:>15,.2f}")
     
     # Store breakdown
-    print("\n\n REVENUE BY STORE:\n")
+    print("\n\n🏪 REVENUE BY STORE:\n")
     store_revenue = sales_df.groupby('store_name')['revenue'].sum().sort_values(ascending=False)
     for store, revenue in store_revenue.items():
         print(f"   {store:<25} ${revenue:>15,.2f}")
     
     # Save data
     print("\n" + "="*70)
-    print(" SAVING DATA FILES")
+    print("💾 SAVING DATA FILES")
     print("="*70 + "\n")
     
     # Create data directory if it doesn't exist
@@ -128,10 +135,10 @@ def main():
     print("✓ Saved: data/test_summary.json")
     
     print("\n" + "="*70)
-    print(" TEST COMPLETE - All systems working!")
+    print("✅ TEST COMPLETE - All systems working!")
     print("="*70 + "\n")
     
-    print(" NEXT STEPS:")
+    print("🎯 NEXT STEPS:")
     print("   1. Check the generated CSV files in data/ directory")
     print("   2. Run the full notebook: jupyter notebook notebooks/retail_forecasting_demo.ipynb")
     print("   3. Launch the dashboard: python run_retail_dashboard.py")
@@ -141,7 +148,7 @@ if __name__ == "__main__":
     try:
         main()
     except Exception as e:
-        print(f"\n Error: {e}")
+        print(f"\n❌ Error: {e}")
         print("\nTroubleshooting:")
         print("   1. Make sure you're in the project root directory")
         print("   2. Activate conda environment: conda activate demand-forecast")
