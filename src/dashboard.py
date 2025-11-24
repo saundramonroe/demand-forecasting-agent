@@ -171,23 +171,17 @@ class ForecastingDashboard:
                         ]),
                         dbc.CardBody([
                             dbc.Tabs([
-                                dbc.Tab(
-                                    dcc.Graph(id='forecast-chart', config={'displayModeBar': True}),
-                                    label="📈 Forecast View",
-                                    tab_id="forecast-tab"
-                                ),
-                                dbc.Tab(
-                                    dcc.Graph(id='trend-analysis-chart', config={'displayModeBar': True}),
-                                    label="📊 Trend Analysis",
-                                    tab_id="trend-tab"
-                                ),
-                                dbc.Tab(
-                                    html.Div(id='seasonality-analysis'),
-                                    label="🌡️ Seasonality",
-                                    tab_id="seasonality-tab"
-                                )
-                            ], id="forecast-tabs", active_tab="forecast-tab")
-                        ])
+                                dbc.Tab([
+                                    dcc.Graph(id='forecast-chart', config={'displayModeBar': True}, style={'height': '450px'})
+                                ], label="📈 Forecast View", tab_id="forecast-tab"),
+                                dbc.Tab([
+                                    dcc.Graph(id='trend-analysis-chart', config={'displayModeBar': True}, style={'height': '450px'})
+                                ], label="📊 Trend Analysis", tab_id="trend-tab"),
+                                dbc.Tab([
+                                    html.Div(id='seasonality-analysis', style={'minHeight': '450px'})
+                                ], label="🌡️ Seasonality", tab_id="seasonality-tab")
+                            ], id="forecast-tabs", active_tab="forecast-tab", className="mb-0")
+                        ], className="p-0")
                     ], className="shadow")
                 ], width=8),
                 
@@ -498,6 +492,13 @@ class ForecastingDashboard:
                 ], className="text-center p-5")
             
             try:
+                # Get SKU info for context
+                if sku_id not in self.agent.forecast_accuracy:
+                    return dbc.Alert("Please generate a forecast first before requesting AI analysis", color="info")
+                
+                # Get inventory info
+                inv_info = self.inventory_data[self.inventory_data['sku_id'] == sku_id].iloc[0]
+                
                 # Get SKU info
                 sku_data = self.sales_data[self.sales_data['sku_id'] == sku_id]
                 category = sku_data['category'].iloc[0]
