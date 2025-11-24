@@ -1,0 +1,11 @@
+supplier_id,supplier_name,total_orders,on_time_delivery_rate,avg_days_late,avg_fill_rate,avg_quality_rating,total_quantity_ordered,total_quantity_received,quality_issues_count,performance_score,reliability_tier
+SUP_010,Supplier 10,5,100.0,-0.6,141.9581448176339,3.8,2235,2858.44,2,105.4,A - Excellent
+SUP_002,Supplier 2,5,40.0,1.6,197.90462499389082,4.6,2431,3296.58,1,103.0,A - Excellent
+SUP_005,Supplier 5,11,45.45454545454545,0.6363636363636364,165.31024131224396,4.0,5839,6665.6,4,91.8,A - Excellent
+SUP_007,Supplier 7,4,50.0,1.0,163.30263774742662,3.5,2288,2186.09,2,90.0,A - Excellent
+SUP_006,Supplier 6,2,50.0,1.5,116.27154606975535,3.5,990,1029.54,1,75.9,B - Good
+SUP_004,Supplier 4,4,50.0,0.25,119.61645157131919,3.25,2299,1751.07,3,75.4,B - Good
+SUP_008,Supplier 8,4,50.0,1.0,109.51640778448645,3.25,2416,2043.2199999999998,3,72.4,C - Acceptable
+SUP_003,Supplier 3,7,42.857142857142854,1.0,103.04344040157362,4.0,3708,3234.28,3,72.1,C - Acceptable
+SUP_009,Supplier 9,4,25.0,3.0,122.64764280530791,3.75,2174,1858.47,2,69.3,C - Acceptable
+SUP_001,Supplier 1,4,0.0,3.25,141.63888734569974,4.0,1637,1809.88,0,66.5,C - Acceptable

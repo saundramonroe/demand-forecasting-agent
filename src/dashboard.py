@@ -14,7 +14,8 @@ from datetime import datetime, timedelta
 class ForecastingDashboard:
     """Interactive dashboard for visualizing forecasts and inventory decisions."""
     
-    def __init__(self, agent, sales_data, external_data, inventory_data):
+    def __init__(self, agent, sales_data, external_data, inventory_data, 
+                 customer_segments=None, supplier_performance=None, forecast_history=None):
         """
         Initialize dashboard.
         
@@ -23,11 +24,17 @@ class ForecastingDashboard:
             sales_data: Historical sales DataFrame
             external_data: External factors DataFrame
             inventory_data: Current inventory DataFrame
+            customer_segments: Customer segmentation DataFrame (optional)
+            supplier_performance: Supplier performance DataFrame (optional)
+            forecast_history: Automated forecast history DataFrame (optional)
         """
         self.agent = agent
         self.sales_data = sales_data
         self.external_data = external_data
         self.inventory_data = inventory_data
+        self.customer_segments = customer_segments
+        self.supplier_performance = supplier_performance
+        self.forecast_history = forecast_history
         
         # Initialize Dash app with custom theme
         self.app = dash.Dash(
@@ -299,6 +306,31 @@ class ForecastingDashboard:
                         ])
                     ], className="shadow")
                 ], width=12)
+            ], className="mb-4"),
+            
+            # New: Advanced Analytics Section
+            dbc.Row([
+                dbc.Col([
+                    dbc.Card([
+                        dbc.CardHeader([
+                            html.I(className="fas fa-chart-pie me-2"),
+                            html.Strong("Advanced Analytics Dashboard")
+                        ], className="bg-dark text-white"),
+                        dbc.CardBody([
+                            dbc.Tabs([
+                                dbc.Tab([
+                                    html.Div(id='customer-segmentation-view', className="p-3")
+                                ], label="👥 Customer Segments", tab_id="customer-tab"),
+                                dbc.Tab([
+                                    html.Div(id='supplier-performance-view', className="p-3")
+                                ], label="📦 Supplier Performance", tab_id="supplier-tab"),
+                                dbc.Tab([
+                                    html.Div(id='forecast-history-view', className="p-3")
+                                ], label="📈 Forecast History", tab_id="history-tab")
+                            ], id="analytics-tabs", active_tab="customer-tab")
+                        ])
+                    ], className="shadow")
+                ])
             ], className="mb-4"),
             
             # Risk Assessment Panel
@@ -673,6 +705,376 @@ Recommended reanalysis: {(datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d
                 
             except Exception as e:
                 return dbc.Alert(f"Analysis error: {str(e)}", color="warning")
+        
+        @self.app.callback(
+            Output('customer-segmentation-view', 'children'),
+            [Input('forecast-tabs', 'id')]  # Dummy input to trigger on load
+        )
+        def update_customer_segmentation(_):
+            """Display customer segmentation analysis."""
+            if self.customer_segments is None or len(self.customer_segments) == 0:
+                return html.Div([
+                    html.I(className="fas fa-users fa-4x text-muted mb-3"),
+                    html.H5("Customer Segmentation", className="mb-2"),
+                    html.P("Customer segmentation data will be available when running the advanced dashboard", 
+                          className="text-muted"),
+                    html.Small("Run: python run_advanced_dashboard.py", className="text-muted")
+                ], className="text-center p-5")
+            
+            try:
+                # Customer segment distribution
+                segment_counts = self.customer_segments['segment'].value_counts()
+                
+                # Create segment cards
+                segment_cards = []
+                segment_colors = {
+                    'Champions': 'success',
+                    'Loyal Customers': 'primary',
+                    'Potential Loyalists': 'info',
+                    'Recent Customers': 'warning',
+                    'At Risk': 'danger',
+                    'Lost Customers': 'secondary'
+                }
+                
+                segment_descriptions = {
+                    'Champions': 'Best customers - high value, frequent purchases',
+                    'Loyal Customers': 'Regular buyers with consistent orders',
+                    'Potential Loyalists': 'Recent frequent buyers, high potential',
+                    'Recent Customers': 'New customers, building relationship',
+                    'At Risk': 'Declining engagement, need attention',
+                    'Lost Customers': 'Inactive, require win-back strategy'
+                }
+                
+                for segment, count in segment_counts.items():
+                    percentage = (count / len(self.customer_segments)) * 100
+                    color = segment_colors.get(segment, 'secondary')
+                    
+                    segment_cards.append(
+                        dbc.Col([
+                            dbc.Card([
+                                dbc.CardBody([
+                                    html.Div([
+                                        html.H4(segment, className=f"text-{color} mb-2"),
+                                        html.H2(f"{count:,}", className="mb-1"),
+                                        html.P(f"{percentage:.1f}% of customers", className="text-muted mb-2"),
+                                        html.Hr(),
+                                        html.Small(segment_descriptions.get(segment, ''), 
+                                                 className="text-muted")
+                                    ], className="text-center")
+                                ])
+                            ], className="h-100 shadow-sm", style={'borderTop': f'4px solid var(--bs-{color})'})
+                        ], width=4, className="mb-3")
+                    )
+                
+                # Create visualization
+                import plotly.express as px
+                fig = px.pie(
+                    values=segment_counts.values,
+                    names=segment_counts.index,
+                    title="<b>Customer Distribution by Segment</b>",
+                    hole=0.4,
+                    color_discrete_map=segment_colors
+                )
+                fig.update_traces(textposition='inside', textinfo='percent+label')
+                fig.update_layout(height=400)
+                
+                # Top customers by segment
+                top_customers = self.customer_segments.nlargest(10, 'monetary')[
+                    ['customer_id', 'segment', 'recency', 'frequency', 'monetary', 'rfm_score']
+                ]
+                
+                return html.Div([
+                    html.H4("📊 Customer Segmentation Analysis", className="mb-4"),
+                    dbc.Row(segment_cards),
+                    
+                    html.Hr(className="my-4"),
+                    
+                    dbc.Row([
+                        dbc.Col([
+                            dcc.Graph(figure=fig, config={'displayModeBar': False})
+                        ], width=6),
+                        dbc.Col([
+                            html.H5("Top 10 Customers by Value", className="mb-3"),
+                            dash_table.DataTable(
+                                data=top_customers.to_dict('records'),
+                                columns=[{'name': i, 'id': i} for i in top_customers.columns],
+                                style_cell={'textAlign': 'left', 'padding': '10px', 'fontSize': '12px'},
+                                style_header={'backgroundColor': '#f8f9fa', 'fontWeight': 'bold'},
+                                style_data_conditional=[
+                                    {'if': {'row_index': 'odd'}, 'backgroundColor': '#f8f9fa'}
+                                ],
+                                page_size=10
+                            )
+                        ], width=6)
+                    ])
+                ])
+                
+            except Exception as e:
+                return dbc.Alert(f"Error loading customer data: {e}", color="warning")
+        
+        @self.app.callback(
+            Output('supplier-performance-view', 'children'),
+            [Input('forecast-tabs', 'id')]  # Dummy input
+        )
+        def update_supplier_performance(_):
+            """Display supplier performance metrics."""
+            if self.supplier_performance is None or len(self.supplier_performance) == 0:
+                return html.Div([
+                    html.I(className="fas fa-truck fa-4x text-muted mb-3"),
+                    html.H5("Supplier Performance Tracking", className="mb-2"),
+                    html.P("Supplier performance data will be available when running the advanced dashboard", 
+                          className="text-muted"),
+                    html.Small("Run: python run_advanced_dashboard.py", className="text-muted")
+                ], className="text-center p-5")
+            
+            try:
+                # Create performance cards for top suppliers
+                top_suppliers = self.supplier_performance.nlargest(5, 'performance_score')
+                
+                supplier_cards = []
+                for _, supplier in top_suppliers.iterrows():
+                    # Determine tier color
+                    tier_color = {
+                        'A - Excellent': 'success',
+                        'B - Good': 'primary',
+                        'C - Acceptable': 'warning',
+                        'D - Needs Improvement': 'danger'
+                    }.get(supplier['reliability_tier'], 'secondary')
+                    
+                    supplier_cards.append(
+                        dbc.Col([
+                            dbc.Card([
+                                dbc.CardBody([
+                                    html.H5(supplier['supplier_name'], className="mb-3"),
+                                    html.Div([
+                                        dbc.Badge(supplier['reliability_tier'], 
+                                                color=tier_color, className="mb-3 p-2")
+                                    ]),
+                                    html.Div([
+                                        html.Strong("Performance Score:", className="d-block text-muted small"),
+                                        html.H3(f"{supplier['performance_score']:.0f}", 
+                                              className=f"text-{tier_color} mb-3")
+                                    ], className="text-center mb-3"),
+                                    html.Hr(),
+                                    html.Div([
+                                        html.P([
+                                            html.I(className="fas fa-clock me-2 text-success"),
+                                            f"On-time: {supplier['on_time_delivery_rate']:.0f}%"
+                                        ], className="mb-2 small"),
+                                        html.P([
+                                            html.I(className="fas fa-box me-2 text-info"),
+                                            f"Fill rate: {supplier['avg_fill_rate']:.0f}%"
+                                        ], className="mb-2 small"),
+                                        html.P([
+                                            html.I(className="fas fa-star me-2 text-warning"),
+                                            f"Quality: {supplier['avg_quality_rating']:.1f}/5"
+                                        ], className="mb-2 small"),
+                                        html.P([
+                                            html.I(className="fas fa-shopping-cart me-2 text-primary"),
+                                            f"Orders: {supplier['total_orders']}"
+                                        ], className="mb-0 small")
+                                    ])
+                                ])
+                            ], className="h-100 shadow-sm")
+                        ], width=12, lg=4, className="mb-3")
+                    )
+                
+                # Create comparison chart
+                import plotly.express as px
+                fig = px.bar(
+                    self.supplier_performance,
+                    x='supplier_name',
+                    y='performance_score',
+                    color='reliability_tier',
+                    title="<b>Supplier Performance Comparison</b>",
+                    labels={'performance_score': 'Performance Score', 'supplier_name': 'Supplier'},
+                    color_discrete_map={
+                        'A - Excellent': '#28a745',
+                        'B - Good': '#007bff',
+                        'C - Acceptable': '#ffc107',
+                        'D - Needs Improvement': '#dc3545'
+                    }
+                )
+                fig.update_layout(height=400, showlegend=True)
+                
+                # Full data table
+                table_data = self.supplier_performance[[
+                    'supplier_name', 'reliability_tier', 'performance_score',
+                    'on_time_delivery_rate', 'avg_fill_rate', 'avg_quality_rating',
+                    'total_orders'
+                ]].copy()
+                
+                table_data.columns = ['Supplier', 'Tier', 'Score', 'On-Time %', 
+                                     'Fill Rate %', 'Quality', 'Orders']
+                
+                return html.Div([
+                    html.H4("📦 Supplier Performance Dashboard", className="mb-4"),
+                    
+                    dbc.Row([
+                        dbc.Col([
+                            html.Div([
+                                html.I(className="fas fa-trophy fa-2x text-warning mb-2"),
+                                html.H3(f"{len(self.supplier_performance)}", className="mb-1"),
+                                html.P("Total Suppliers", className="text-muted mb-0")
+                            ], className="text-center p-3 bg-light rounded")
+                        ], width=3),
+                        dbc.Col([
+                            html.Div([
+                                html.I(className="fas fa-star fa-2x text-success mb-2"),
+                                html.H3(f"{len(self.supplier_performance[self.supplier_performance['reliability_tier'].str.startswith('A')])}", 
+                                       className="mb-1"),
+                                html.P("A-Tier Suppliers", className="text-muted mb-0")
+                            ], className="text-center p-3 bg-light rounded")
+                        ], width=3),
+                        dbc.Col([
+                            html.Div([
+                                html.I(className="fas fa-chart-line fa-2x text-primary mb-2"),
+                                html.H3(f"{self.supplier_performance['performance_score'].mean():.0f}", 
+                                       className="mb-1"),
+                                html.P("Avg Performance", className="text-muted mb-0")
+                            ], className="text-center p-3 bg-light rounded")
+                        ], width=3),
+                        dbc.Col([
+                            html.Div([
+                                html.I(className="fas fa-exclamation-triangle fa-2x text-danger mb-2"),
+                                html.H3(f"{len(self.supplier_performance[self.supplier_performance['performance_score'] < 60])}", 
+                                       className="mb-1"),
+                                html.P("At-Risk Suppliers", className="text-muted mb-0")
+                            ], className="text-center p-3 bg-light rounded")
+                        ], width=3)
+                    ], className="mb-4"),
+                    
+                    html.H5("Top Performing Suppliers", className="mb-3"),
+                    dbc.Row(supplier_cards),
+                    
+                    html.Hr(className="my-4"),
+                    
+                    dbc.Row([
+                        dbc.Col([
+                            dcc.Graph(figure=fig, config={'displayModeBar': False})
+                        ], width=12)
+                    ], className="mb-4"),
+                    
+                    html.H5("Complete Supplier Metrics", className="mb-3"),
+                    dash_table.DataTable(
+                        data=table_data.to_dict('records'),
+                        columns=[{'name': i, 'id': i} for i in table_data.columns],
+                        style_cell={'textAlign': 'left', 'padding': '12px', 'fontSize': '13px'},
+                        style_header={
+                            'backgroundColor': '#343a40',
+                            'color': 'white',
+                            'fontWeight': 'bold'
+                        },
+                        style_data_conditional=[
+                            {'if': {'row_index': 'odd'}, 'backgroundColor': '#f8f9fa'},
+                            {
+                                'if': {
+                                    'filter_query': '{Score} >= 90',
+                                    'column_id': 'Score'
+                                },
+                                'backgroundColor': '#d4edda',
+                                'color': '#155724'
+                            },
+                            {
+                                'if': {
+                                    'filter_query': '{Score} < 60',
+                                    'column_id': 'Score'
+                                },
+                                'backgroundColor': '#f8d7da',
+                                'color': '#721c24'
+                            }
+                        ],
+                        sort_action='native',
+                        filter_action='native',
+                        page_size=10
+                    )
+                ])
+                
+            except Exception as e:
+                return dbc.Alert(f"Error loading supplier data: {e}", color="warning")
+        
+        @self.app.callback(
+            Output('forecast-history-view', 'children'),
+            [Input('forecast-tabs', 'id')]  # Dummy input
+        )
+        def update_forecast_history(_):
+            """Display forecast history and accuracy trends."""
+            if self.forecast_history is None or len(self.forecast_history) == 0:
+                return html.Div([
+                    html.I(className="fas fa-history fa-4x text-muted mb-3"),
+                    html.H5("Automated Forecast History", className="mb-2"),
+                    html.P("Forecast history will accumulate as you run automated daily forecasts", 
+                          className="text-muted"),
+                    html.Small("Start scheduler: python run_automated_scheduler.py", className="text-muted")
+                ], className="text-center p-5")
+            
+            try:
+                # Create timeline chart
+                import plotly.express as px
+                
+                fig = px.line(
+                    self.forecast_history,
+                    x='timestamp',
+                    y='forecasts_generated',
+                    title="<b>Daily Forecast Execution History</b>",
+                    labels={'timestamp': 'Date', 'forecasts_generated': 'Forecasts Generated'}
+                )
+                fig.update_layout(height=350)
+                
+                # Summary stats
+                total_runs = len(self.forecast_history)
+                avg_forecasts = self.forecast_history['forecasts_generated'].mean()
+                total_urgent = self.forecast_history['urgent_reorders'].sum()
+                
+                return html.Div([
+                    html.H4("📈 Automated Forecast History", className="mb-4"),
+                    
+                    dbc.Row([
+                        dbc.Col([
+                            html.Div([
+                                html.I(className="fas fa-calendar-check fa-2x text-primary mb-2"),
+                                html.H3(f"{total_runs}", className="mb-1"),
+                                html.P("Total Forecast Runs", className="text-muted mb-0")
+                            ], className="text-center p-3 bg-light rounded")
+                        ], width=4),
+                        dbc.Col([
+                            html.Div([
+                                html.I(className="fas fa-chart-bar fa-2x text-success mb-2"),
+                                html.H3(f"{avg_forecasts:.0f}", className="mb-1"),
+                                html.P("Avg Forecasts per Run", className="text-muted mb-0")
+                            ], className="text-center p-3 bg-light rounded")
+                        ], width=4),
+                        dbc.Col([
+                            html.Div([
+                                html.I(className="fas fa-bell fa-2x text-danger mb-2"),
+                                html.H3(f"{total_urgent}", className="mb-1"),
+                                html.P("Total Urgent Alerts", className="text-muted mb-0")
+                            ], className="text-center p-3 bg-light rounded")
+                        ], width=4)
+                    ], className="mb-4"),
+                    
+                    dcc.Graph(figure=fig, config={'displayModeBar': False}),
+                    
+                    html.Hr(className="my-4"),
+                    
+                    html.H5("Recent Forecast Runs", className="mb-3"),
+                    dash_table.DataTable(
+                        data=self.forecast_history.tail(20).to_dict('records'),
+                        columns=[
+                            {'name': 'Timestamp', 'id': 'timestamp'},
+                            {'name': 'Total SKUs', 'id': 'total_skus'},
+                            {'name': 'Forecasts Generated', 'id': 'forecasts_generated'},
+                            {'name': 'Urgent Reorders', 'id': 'urgent_reorders'}
+                        ],
+                        style_cell={'textAlign': 'left', 'padding': '12px'},
+                        style_header={'backgroundColor': '#f8f9fa', 'fontWeight': 'bold'},
+                        sort_action='native',
+                        page_size=10
+                    )
+                ])
+                
+            except Exception as e:
+                return dbc.Alert(f"Error loading forecast history: {e}", color="warning")
     
     def _create_product_overview(self, sku_id, sku_history):
         """Create product overview panel."""

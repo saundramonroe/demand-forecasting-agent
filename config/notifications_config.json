@@ -1,0 +1,11 @@
+{
+    "enabled": false,
+    "sender_email": "anaconda.test99@gmail.com",
+    "sender_password": "Anaconda2025!",
+    "recipient_emails": [
+      "smonroe@anaconda.com"
+    ],
+    "smtp_server": "smtp.gmail.com",
+    "smtp_port": 587,
+    "schedule_time": "09:00"
+  }
