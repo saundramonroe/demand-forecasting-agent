@@ -161,27 +161,27 @@ class ForecastingDashboard:
                 ], width=9)
             ], className="mb-4"),
             
-            # Main Forecast Section with Tabs
+            # Main Forecast Section - Direct Charts (No Tabs for Now)
             dbc.Row([
                 dbc.Col([
                     dbc.Card([
                         dbc.CardHeader([
                             html.I(className="fas fa-chart-area me-2"),
-                            html.Strong("Demand Analysis & Forecasting")
+                            html.Strong("Demand Forecast with Confidence Intervals")
                         ]),
                         dbc.CardBody([
-                            dbc.Tabs([
-                                dbc.Tab([
-                                    dcc.Graph(id='forecast-chart', config={'displayModeBar': True}, style={'height': '450px'})
-                                ], label="📈 Forecast View", tab_id="forecast-tab"),
-                                dbc.Tab([
-                                    dcc.Graph(id='trend-analysis-chart', config={'displayModeBar': True}, style={'height': '450px'})
-                                ], label="📊 Trend Analysis", tab_id="trend-tab"),
-                                dbc.Tab([
-                                    html.Div(id='seasonality-analysis', style={'minHeight': '450px'})
-                                ], label="🌡️ Seasonality", tab_id="seasonality-tab")
-                            ], id="forecast-tabs", active_tab="forecast-tab", className="mb-0")
-                        ], className="p-0")
+                            dcc.Graph(id='forecast-chart', config={'displayModeBar': True})
+                        ])
+                    ], className="shadow mb-3"),
+                    
+                    dbc.Card([
+                        dbc.CardHeader([
+                            html.I(className="fas fa-chart-line me-2"),
+                            html.Strong("Trend Analysis - Historical vs Forecast")
+                        ]),
+                        dbc.CardBody([
+                            dcc.Graph(id='trend-analysis-chart', config={'displayModeBar': True})
+                        ])
                     ], className="shadow")
                 ], width=8),
                 
@@ -224,6 +224,21 @@ class ForecastingDashboard:
                         ])
                     ], className="shadow")
                 ], width=6)
+            ], className="mb-4"),
+            
+            # Seasonality Analysis
+            dbc.Row([
+                dbc.Col([
+                    dbc.Card([
+                        dbc.CardHeader([
+                            html.I(className="fas fa-sun me-2"),
+                            html.Strong("Seasonal Demand Patterns")
+                        ]),
+                        dbc.CardBody([
+                            html.Div(id='seasonality-analysis')
+                        ])
+                    ], className="shadow")
+                ], width=12)
             ], className="mb-4"),
             
             # Model Performance and Statistics
@@ -364,37 +379,47 @@ class ForecastingDashboard:
              Output('avg-accuracy', 'children')],
             [Input('forecast-button', 'n_clicks')],
             [State('sku-selector', 'value'),
-             State('horizon-slider', 'value')]
+             State('horizon-slider', 'value')],
+            prevent_initial_call=False
         )
         def update_forecast(n_clicks, sku_id, horizon):
             """Update all dashboard components."""
             
             total_skus = len(self.sales_data['sku_id'].unique())
             
+            # Initial state - before any button clicks
             if n_clicks is None:
-                empty_outputs = (
-                    self._generate_empty_figure(),
-                    self._generate_empty_figure(),
-                    self._create_empty_seasonality(),
-                    self._generate_empty_figure(),
-                    self._create_empty_reorder_card(),
-                    "",
-                    self._generate_empty_figure(),
-                    self._create_empty_metrics(),
-                    self._create_empty_inventory(),
-                    self._create_empty_product_overview(),
-                    self._create_empty_stats_table(),
-                    self._create_empty_risk_assessment(),
-                    str(total_skus), "0", "--", "--"
+                empty_fig = self._generate_empty_figure()
+                return (
+                    empty_fig,  # forecast-chart
+                    empty_fig,  # trend-analysis-chart
+                    self._create_empty_seasonality(),  # seasonality-analysis
+                    empty_fig,  # weekly-pattern-chart
+                    self._create_empty_reorder_card(),  # reorder-recommendation
+                    html.Div(),  # forecast-status
+                    empty_fig,  # historical-chart
+                    self._create_empty_metrics(),  # model-metrics
+                    self._create_empty_inventory(),  # inventory-metrics
+                    self._create_empty_product_overview(),  # product-overview
+                    self._create_empty_stats_table(),  # forecast-stats-table
+                    self._create_empty_risk_assessment(),  # risk-assessment
+                    str(total_skus),  # total-skus
+                    "0",  # urgent-reorders
+                    "--",  # avg-stockout-days
+                    "--"  # avg-accuracy
                 )
-                return empty_outputs
             
             try:
+                print(f"\n🔍 DEBUG: Processing forecast for {sku_id}, horizon={horizon}")
+                
                 # Train model if needed
                 if sku_id not in self.agent.models:
+                    print(f"   Training model for {sku_id}...")
                     self.agent.train_model(sku_id, self.sales_data, self.external_data)
+                    print(f"   ✓ Model trained")
                 
                 # Generate forecast
+                print(f"   Generating forecast...")
                 future_dates = pd.date_range(
                     start=datetime.now(),
                     periods=int(horizon),
@@ -402,37 +427,53 @@ class ForecastingDashboard:
                 )
                 
                 forecast_df = self.agent.predict_demand(sku_id, future_dates, self.external_data)
+                print(f"   ✓ Forecast generated: {len(forecast_df)} predictions")
                 
                 # Get inventory and historical data
+                print(f"   Getting inventory and historical data...")
                 inv_info = self.inventory_data[self.inventory_data['sku_id'] == sku_id].iloc[0]
                 sku_history = self.sales_data[self.sales_data['sku_id'] == sku_id].copy()
                 sku_history['date'] = pd.to_datetime(sku_history['date'])
+                print(f"   ✓ Historical data: {len(sku_history)} records")
                 
                 # Calculate reorder
+                print(f"   Calculating reorder recommendation...")
                 reorder_info = self.agent.calculate_dynamic_reorder(
                     sku_id,
                     forecast_df,
                     int(inv_info['current_stock']),
                     int(inv_info['lead_time_days'])
                 )
+                print(f"   ✓ Reorder calculated")
                 
                 # Create all visualizations
+                print(f"   Creating visualizations...")
                 forecast_fig = self._create_forecast_chart(forecast_df, inv_info, sku_id, sku_history)
-                trend_fig = self._create_trend_analysis_chart(sku_history, forecast_df)
-                seasonality_content = self._create_seasonality_analysis(sku_history)
-                weekly_fig = self._create_weekly_pattern_chart(sku_history)
-                reorder_card = self._create_reorder_card(reorder_info, inv_info)
-                status = dbc.Alert([
-                    html.I(className="fas fa-check-circle me-2"),
-                    f"Forecast generated successfully for {sku_id} ({horizon} days)"
-                ], color="success", dismissable=True, className="mb-0")
+                print(f"   ✓ Forecast chart created")
                 
+                trend_fig = self._create_trend_analysis_chart(sku_history, forecast_df)
+                print(f"   ✓ Trend chart created")
+                
+                seasonality_content = self._create_seasonality_analysis(sku_history)
+                print(f"   ✓ Seasonality analysis created")
+                
+                weekly_fig = self._create_weekly_pattern_chart(sku_history)
+                print(f"   ✓ Weekly pattern created")
+                
+                reorder_card = self._create_reorder_card(reorder_info, inv_info)
                 historical_fig = self._create_historical_chart(sku_id, sku_history)
                 metrics = self._create_metrics_display(sku_id)
                 inv_metrics = self._create_inventory_display(inv_info, reorder_info)
                 product_overview = self._create_product_overview(sku_id, sku_history)
                 stats_table = self._create_forecast_stats_table(forecast_df, reorder_info)
                 risk_assessment = self._create_risk_assessment(reorder_info, forecast_df, inv_info)
+                
+                print(f"   ✓ All components created")
+                
+                status = dbc.Alert([
+                    html.I(className="fas fa-check-circle me-2"),
+                    f"Forecast generated successfully for {sku_id} ({horizon} days)"
+                ], color="success", dismissable=True, className="mb-0")
                 
                 # Calculate summary KPIs
                 urgent_count = 1 if reorder_info['urgency'] == 'HIGH' else 0
@@ -448,33 +489,61 @@ class ForecastingDashboard:
                 
                 avg_accuracy = f"{(accuracy_sum / count * 100):.1f}%" if count > 0 else "--"
                 
-                return (forecast_fig, trend_fig, seasonality_content, weekly_fig,
-                       reorder_card, status, historical_fig, metrics, inv_metrics,
-                       product_overview, stats_table, risk_assessment,
-                       str(total_skus), str(urgent_count), avg_days, avg_accuracy)
+                print(f"   ✓ Returning all outputs to dashboard\n")
+                
+                return (
+                    forecast_fig,
+                    trend_fig,
+                    seasonality_content,
+                    weekly_fig,
+                    reorder_card,
+                    status,
+                    historical_fig,
+                    metrics,
+                    inv_metrics,
+                    product_overview,
+                    stats_table,
+                    risk_assessment,
+                    str(total_skus),
+                    str(urgent_count),
+                    avg_days,
+                    avg_accuracy
+                )
                 
             except Exception as e:
+                import traceback
+                error_trace = traceback.format_exc()
+                print(f"\n❌ ERROR in update_forecast callback:")
+                print(error_trace)
+                
                 error_msg = dbc.Alert([
                     html.I(className="fas fa-exclamation-triangle me-2"),
-                    f"Error: {str(e)}"
+                    html.Strong("Error: "),
+                    str(e),
+                    html.Br(),
+                    html.Small("Check terminal for details", className="text-muted")
                 ], color="danger")
                 
-                empty_outputs = (
-                    self._generate_empty_figure(),
-                    self._generate_empty_figure(),
-                    self._create_empty_seasonality(),
-                    self._generate_empty_figure(),
-                    self._create_empty_reorder_card(),
-                    error_msg,
-                    self._generate_empty_figure(),
-                    self._create_empty_metrics(),
-                    self._create_empty_inventory(),
-                    self._create_empty_product_overview(),
-                    self._create_empty_stats_table(),
-                    self._create_empty_risk_assessment(),
-                    str(total_skus), "0", "--", "--"
+                empty_fig = self._generate_empty_figure()
+                
+                return (
+                    empty_fig,  # forecast-chart
+                    empty_fig,  # trend-analysis-chart
+                    self._create_empty_seasonality(),  # seasonality-analysis
+                    empty_fig,  # weekly-pattern-chart
+                    self._create_empty_reorder_card(),  # reorder-recommendation
+                    error_msg,  # forecast-status
+                    empty_fig,  # historical-chart
+                    self._create_empty_metrics(),  # model-metrics
+                    self._create_empty_inventory(),  # inventory-metrics
+                    self._create_empty_product_overview(),  # product-overview
+                    self._create_empty_stats_table(),  # forecast-stats-table
+                    self._create_empty_risk_assessment(),  # risk-assessment
+                    str(total_skus),  # total-skus
+                    "0",  # urgent-reorders
+                    "--",  # avg-stockout-days
+                    "--"  # avg-accuracy
                 )
-                return empty_outputs
         
         @self.app.callback(
             Output('ai-analysis-output', 'children'),
