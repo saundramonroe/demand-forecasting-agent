@@ -758,8 +758,14 @@ Recommended reanalysis: {(datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d
         """Create comprehensive forecast visualization."""
         fig = go.Figure()
         
+        # Make sure dates are datetime
+        forecast_df = forecast_df.copy()
+        forecast_df['date'] = pd.to_datetime(forecast_df['date'])
+        
         # Historical data (last 30 days)
-        recent_history = sku_history.tail(30)
+        recent_history = sku_history.tail(30).copy()
+        recent_history['date'] = pd.to_datetime(recent_history['date'])
+        
         fig.add_trace(go.Scatter(
             x=recent_history['date'],
             y=recent_history['sales'],
@@ -771,36 +777,37 @@ Recommended reanalysis: {(datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d
         
         # Predicted demand
         fig.add_trace(go.Scatter(
-            x=forecast_df['date'],
-            y=forecast_df['predicted_demand'],
+            x=list(forecast_df['date']),
+            y=list(forecast_df['predicted_demand']),
             mode='lines+markers',
             name='Predicted Demand',
             line=dict(color='#667eea', width=3),
             marker=dict(size=7, symbol='circle'),
-            hovertemplate='<b>Forecast</b><br>Date: %{x|%{x|%Y-%m-%d}<br>Demand: %{y} units<extra></extra>'
+            hovertemplate='<b>Forecast</b><br>Date: %{x|%Y-%m-%d}<br>Demand: %{y} units<extra></extra>'
         ))
         
-        # Confidence interval
+        # Confidence interval - Upper
         fig.add_trace(go.Scatter(
-            x=forecast_df['date'],
-            y=forecast_df['upper_bound'],
+            x=list(forecast_df['date']),
+            y=list(forecast_df['upper_bound']),
             mode='lines',
-            name='Upper Bound (95%)',
-            line=dict(width=0),
-            showlegend=False,
+            name='Upper Bound',
+            line=dict(width=1, color='rgba(102, 126, 234, 0.3)'),
+            showlegend=True,
             hoverinfo='skip'
         ))
         
+        # Confidence interval - Lower with fill
         fig.add_trace(go.Scatter(
-            x=forecast_df['date'],
-            y=forecast_df['lower_bound'],
+            x=list(forecast_df['date']),
+            y=list(forecast_df['lower_bound']),
             mode='lines',
-            name='95% Confidence Interval',
-            line=dict(width=0),
-            fillcolor='rgba(102, 126, 234, 0.15)',
+            name='Lower Bound',
+            line=dict(width=1, color='rgba(102, 126, 234, 0.3)'),
             fill='tonexty',
-            hovertemplate='<b>Confidence Range</b><br>Upper: %{text}<extra></extra>',
-            text=[f"{int(u)} - {int(l)}" for u, l in zip(forecast_df['upper_bound'], forecast_df['lower_bound'])]
+            fillcolor='rgba(102, 126, 234, 0.15)',
+            showlegend=True,
+            hoverinfo='skip'
         ))
         
         # Current stock level
@@ -855,18 +862,23 @@ Recommended reanalysis: {(datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d
         """Create trend decomposition chart."""
         fig = go.Figure()
         
+        # Ensure datetime
+        sku_history = sku_history.copy()
+        sku_history['date'] = pd.to_datetime(sku_history['date'])
+        forecast_df = forecast_df.copy()
+        forecast_df['date'] = pd.to_datetime(forecast_df['date'])
+        
         # Calculate moving averages
-        sku_history_copy = sku_history.copy()
-        sku_history_copy['ma_7'] = sku_history_copy['sales'].rolling(7, min_periods=1).mean()
-        sku_history_copy['ma_30'] = sku_history_copy['sales'].rolling(30, min_periods=1).mean()
+        sku_history['ma_7'] = sku_history['sales'].rolling(7, min_periods=1).mean()
+        sku_history['ma_30'] = sku_history['sales'].rolling(30, min_periods=1).mean()
         
         # Last 180 days
-        recent = sku_history_copy.tail(180)
+        recent = sku_history.tail(180).copy()
         
         # Actual sales
         fig.add_trace(go.Scatter(
-            x=recent['date'],
-            y=recent['sales'],
+            x=list(recent['date']),
+            y=list(recent['sales']),
             mode='markers',
             name='Daily Sales',
             marker=dict(size=4, color='#bdc3c7', opacity=0.5),
@@ -875,8 +887,8 @@ Recommended reanalysis: {(datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d
         
         # 7-day MA
         fig.add_trace(go.Scatter(
-            x=recent['date'],
-            y=recent['ma_7'],
+            x=list(recent['date']),
+            y=list(recent['ma_7']),
             mode='lines',
             name='7-Day Trend',
             line=dict(color='#3498db', width=2),
@@ -885,8 +897,8 @@ Recommended reanalysis: {(datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d
         
         # 30-day MA
         fig.add_trace(go.Scatter(
-            x=recent['date'],
-            y=recent['ma_30'],
+            x=list(recent['date']),
+            y=list(recent['ma_30']),
             mode='lines',
             name='30-Day Trend',
             line=dict(color='#e74c3c', width=3),
@@ -895,8 +907,8 @@ Recommended reanalysis: {(datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d
         
         # Forecast trend
         fig.add_trace(go.Scatter(
-            x=forecast_df['date'],
-            y=forecast_df['predicted_demand'],
+            x=list(forecast_df['date']),
+            y=list(forecast_df['predicted_demand']),
             mode='lines',
             name='Forecast Trend',
             line=dict(color='#2ecc71', width=3, dash='dash'),
@@ -910,7 +922,8 @@ Recommended reanalysis: {(datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d
             hovermode='x unified',
             template='plotly_white',
             height=450,
-            legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5)
+            legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5),
+            margin=dict(t=50, b=80, l=60, r=40)
         )
         
         return fig
@@ -1391,6 +1404,17 @@ Recommended reanalysis: {(datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d
     def _generate_empty_figure(self):
         """Generate professional empty state figure."""
         fig = go.Figure()
+        
+        # Add empty trace to initialize properly
+        fig.add_trace(go.Scatter(
+            x=[0],
+            y=[0],
+            mode='markers',
+            marker=dict(size=0.1, color='white'),
+            showlegend=False,
+            hoverinfo='skip'
+        ))
+        
         fig.add_annotation(
             text="<b>Select SKU and Generate Forecast</b><br><sub>Choose a product and click the forecast button to begin analysis</sub>",
             xref="paper", yref="paper",
@@ -1398,13 +1422,17 @@ Recommended reanalysis: {(datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d
             showarrow=False,
             font=dict(size=14, color="#6c757d")
         )
+        
         fig.update_layout(
             template='plotly_white',
-            height=400,
-            xaxis={'visible': False},
-            yaxis={'visible': False},
-            margin=dict(t=20, b=20, l=20, r=20)
+            height=450,
+            xaxis={'visible': False, 'showgrid': False},
+            yaxis={'visible': False, 'showgrid': False},
+            margin=dict(t=20, b=20, l=20, r=20),
+            paper_bgcolor='white',
+            plot_bgcolor='white'
         )
+        
         return fig
     
     def run(self, host='127.0.0.1', port=8050, debug=True):
