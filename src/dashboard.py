@@ -380,8 +380,8 @@ class ForecastingDashboard:
                     html.Div([
                         html.P([
                             html.I(className="fas fa-copyright me-1"),
-                            f"2024 AI Demand Forecasting System | ",
-                            html.Strong("Powered by Qwen2.5 & scikit-learn"),
+                            f"2025 AI Demand Forecasting System | ",
+                            html.Strong("Powered by Anaconda Platform: AI Catalyst curated model Qwen2.5"),
                             " | ",
                             html.A([
                                 html.I(className="fab fa-github me-1"),
