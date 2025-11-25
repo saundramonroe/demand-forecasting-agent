@@ -1,3 +1,4 @@
+# pylint: disable=import-error
 """
 Interactive web dashboard for demand forecasting visualization.
 Comprehensive, enterprise-grade design with complete analysis in one view.
@@ -13,12 +14,10 @@ from datetime import datetime, timedelta
 
 class ForecastingDashboard:
     """Interactive dashboard for visualizing forecasts and inventory decisions."""
-    
-    def __init__(self, agent, sales_data, external_data, inventory_data, 
-                 customer_segments=None, supplier_performance=None, forecast_history=None):
+    def __init__(self, agent, sales_data, external_data, inventory_data,
+             customer_segments=None, supplier_performance=None, forecast_history=None):
         """
         Initialize dashboard.
-        
         Args:
             agent: DemandForecastingAgent instance
             sales_data: Historical sales DataFrame
@@ -36,7 +35,6 @@ class ForecastingDashboard:
         self.supplier_performance = supplier_performance
         self.forecast_history = forecast_history
         self.urgent_reorder_count = 0  # Will be set by runner script
-        
         # Initialize Dash app with custom theme
         self.app = dash.Dash(
             __name__,
@@ -47,16 +45,12 @@ class ForecastingDashboard:
             suppress_callback_exceptions=True,
             meta_tags=[{'name': 'viewport', 'content': 'width=device-width, initial-scale=1.0'}]
         )
-        
         self.app.title = "AI Demand Forecasting Dashboard"
-        
         self.setup_layout()
         self.setup_callbacks()
-    
     def setup_layout(self):
         """Setup comprehensive dashboard layout."""
-        
-        # Get SKU options with product names
+         # Get SKU options with product names
         sku_options = []
         for sku in sorted(self.sales_data['sku_id'].unique()):
             category = self.sales_data[self.sales_data['sku_id'] == sku]['category'].iloc[0]
@@ -2204,53 +2198,45 @@ class ForecastingDashboard:
                 'borderRadius': '10px',
                 'marginBottom': '20px'
             }),
-            
             # Detailed Metrics
             html.Div([
-                html.H6("Inventory Analysis", className="mb-3 text-uppercase small fw-bold text-muted"),
-                
+            html.H6("Inventory Analysis", className="mb-3 text-uppercase small fw-bold text-muted"),
                 self._metric_row_detailed("Current Stock Level", 
                                          f"{reorder_info['current_stock']:,}", 
                                          "units", 
                                          "fa-boxes", 
                                          "primary"),
                 html.Hr(className="my-2 opacity-25"),
-                
                 self._metric_row_detailed("Dynamic Reorder Point", 
                                          f"{reorder_info['reorder_point']:,}", 
                                          "units", 
                                          "fa-flag", 
                                          "warning"),
                 html.Hr(className="my-2 opacity-25"),
-                
                 self._metric_row_detailed("Recommended Order Qty", 
                                          f"{reorder_info['reorder_quantity']:,}", 
                                          "units", 
                                          "fa-shopping-cart", 
                                          "info"),
                 html.Hr(className="my-2 opacity-25"),
-                
                 self._metric_row_detailed("Days Until Stockout", 
                                          f"{reorder_info['days_until_stockout']}", 
-                                         "days", 
-                                         "fa-clock", 
-                                         "danger" if reorder_info['days_until_stockout'] < 7 else "success"),
-                html.Hr(className="my-2 opacity-25"),
-                
+                                        "days", 
+                                        "fa-clock", 
+                                        "danger" if reorder_info['days_until_stockout'] < 7 else "success"),
+                html.Hr(className="my-2 opacity-25"), 
                 self._metric_row_detailed("Safety Stock Buffer", 
                                          f"{reorder_info['safety_stock']:,}", 
                                          "units", 
                                          "fa-shield-alt", 
                                          "secondary"),
-                html.Hr(className="my-2 opacity-25"),
-                
+                html.Hr(className="my-2 opacity-25"),   
                 self._metric_row_detailed("Lead Time Demand", 
                                          f"{reorder_info['lead_time_demand']:,}", 
                                          "units", 
                                          "fa-truck", 
                                          "info"),
-            ], className="mb-3"),
-            
+            ], className="mb-3"), 
             # Financial Impact
             html.Div([
                 html.H6("Financial Impact", className="mb-3 text-uppercase small fw-bold text-muted"),
@@ -2266,8 +2252,7 @@ class ForecastingDashboard:
                                className="mb-0 text-info")
                     ], className="p-2 bg-light rounded")
                 ])
-            ], className="mb-3"),
-            
+            ], className="mb-3"),   
             # Action Button
             dbc.Button([
                 html.I(className=f"fas {'fa-bell' if reorder_info['needs_reorder'] else 'fa-check'} me-2"),
@@ -2279,7 +2264,6 @@ class ForecastingDashboard:
                 style={'fontSize': '14px', 'fontWeight': 'bold'}
             )
         ])
-    
     def _metric_row_detailed(self, label, value, unit, icon, color):
         """Create detailed metric row."""
         return html.Div([
@@ -2292,14 +2276,11 @@ class ForecastingDashboard:
                 html.Span(unit, className="small text-muted")
             ])
         ], className="mb-2")
-    
     def _create_metrics_display(self, sku_id):
         """Create enhanced model performance display."""
         if sku_id not in self.agent.forecast_accuracy:
             return self._create_empty_metrics()
-        
         metrics = self.agent.forecast_accuracy[sku_id]
-        
         return html.Div([
             dbc.Row([
                 dbc.Col([
@@ -2345,7 +2326,6 @@ class ForecastingDashboard:
                     })
                 ], width=6)
             ], className="mb-3"),
-            
             # Performance Rating
             html.Div([
                 html.H6("Overall Performance Rating:", className="mb-2 fw-bold"),
@@ -2359,8 +2339,7 @@ class ForecastingDashboard:
                     html.Li(f"Features: 15+ temporal & external factors", className="small")
                 ], className="mb-0")
             ])
-        ])
-    
+        ]) 
     def _get_accuracy_description(self, r2_score):
         """Get accuracy description."""
         if r2_score > 0.9:
@@ -2373,7 +2352,6 @@ class ForecastingDashboard:
             return "Fair - Use with caution"
         else:
             return "Poor - Model needs retraining"
-    
     def _get_mape_description(self, mape):
         """Get MAPE description."""
         if mape < 10:
@@ -2384,7 +2362,6 @@ class ForecastingDashboard:
             return "Fair - Moderate error rate"
         else:
             return "Poor - High error rate"
-    
     def _get_performance_badge(self, r2_score, mape):
         """Get comprehensive performance rating."""
         if r2_score > 0.8 and mape < 15:
@@ -2407,7 +2384,6 @@ class ForecastingDashboard:
                 html.I(className="fas fa-times me-1"),
                 "POOR - Retrain Required"
             ], color="danger", className="p-2 fs-6")
-    
     def _create_inventory_display(self, inv_info, reorder_info):
         """Create comprehensive inventory status display."""
         return dbc.Row([
@@ -2463,7 +2439,6 @@ class ForecastingDashboard:
                 })
             ])
         ], className="g-3")
-    
     def _metric_row(self, label, value, icon):
         """Create simple metric row."""
         return html.Div([
@@ -2473,7 +2448,6 @@ class ForecastingDashboard:
             ]),
             html.Div(html.Strong(value, className="h6 mb-0"))
         ], className="d-flex justify-content-between align-items-center")
-    
     def _create_empty_inventory(self):
         """Create empty state for inventory."""
         return html.Div([
@@ -2481,7 +2455,6 @@ class ForecastingDashboard:
             html.P("Select SKU and generate forecast to view detailed inventory metrics", 
                   className="text-muted")
         ], className="text-center p-5")
-    
     def _create_empty_product_overview(self):
         """Create empty state for product overview."""
         return html.Div([
@@ -2489,7 +2462,6 @@ class ForecastingDashboard:
             html.P("Product details will appear here after generating forecast", 
                   className="text-muted small mb-0")
         ], className="text-center p-4")
-    
     def _create_empty_stats_table(self):
         """Create empty state for stats table."""
         return html.Div([
@@ -2497,7 +2469,6 @@ class ForecastingDashboard:
             html.P("Forecast statistics will be calculated after generating predictions", 
                   className="text-muted")
         ], className="text-center p-4")
-    
     def _create_empty_risk_assessment(self):
         """Create empty state for risk assessment."""
         return html.Div([
@@ -2505,7 +2476,6 @@ class ForecastingDashboard:
             html.P("Risk assessment will appear after generating forecast", 
                   className="text-muted")
         ], className="text-center p-4")
-    
     def _create_empty_seasonality(self):
         """Create empty seasonality view."""
         return html.Div([
@@ -2513,7 +2483,6 @@ class ForecastingDashboard:
             html.P("Seasonal patterns will be analyzed after forecast generation", 
                   className="text-muted")
         ], className="text-center p-5")
-    
     def _create_empty_metrics(self):
         """Create empty metrics display."""
         return html.Div([
@@ -2522,7 +2491,6 @@ class ForecastingDashboard:
             html.P("Generate forecast to view detailed model accuracy and performance statistics", 
                   className="text-muted small")
         ], className="text-center p-5")
-    
     def _create_empty_reorder_card(self):
         """Create empty reorder card."""
         return html.Div([
@@ -2531,11 +2499,9 @@ class ForecastingDashboard:
             html.P("Generate forecast to view intelligent reorder recommendations and decision support", 
                   className="text-muted small")
         ], className="text-center p-5")
-    
     def _generate_empty_figure(self):
         """Generate professional empty state figure."""
-        fig = go.Figure()
-        
+        fig = go.Figure()  
         # Add empty trace to initialize properly
         fig.add_trace(go.Scatter(
             x=[0],
@@ -2544,16 +2510,14 @@ class ForecastingDashboard:
             marker=dict(size=0.1, color='white'),
             showlegend=False,
             hoverinfo='skip'
-        ))
-        
+        ))  
         fig.add_annotation(
             text="<b>Select SKU and Generate Forecast</b><br><sub>Choose a product and click the forecast button to begin analysis</sub>",
             xref="paper", yref="paper",
             x=0.5, y=0.5,
             showarrow=False,
             font=dict(size=14, color="#6c757d")
-        )
-        
+        )  
         fig.update_layout(
             template='plotly_white',
             height=450,
@@ -2563,9 +2527,7 @@ class ForecastingDashboard:
             paper_bgcolor='white',
             plot_bgcolor='white'
         )
-        
         return fig
-    
     def run(self, host='127.0.0.1', port=8050, debug=True):
         """Run the dashboard server."""
         print(f"\n" + "="*70)
