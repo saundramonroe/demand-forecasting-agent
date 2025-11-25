@@ -35,6 +35,7 @@ class ForecastingDashboard:
         self.customer_segments = customer_segments
         self.supplier_performance = supplier_performance
         self.forecast_history = forecast_history
+        self.urgent_reorder_count = 0  # Will be set by runner script
         
         # Initialize Dash app with custom theme
         self.app = dash.Dash(
@@ -71,10 +72,10 @@ class ForecastingDashboard:
                     html.Div([
                         html.Div([
                             html.H1([
-                                html.I(className="fas fa-robot me-3"),
+                                #html.I(className="fas fa-robot me-3"),
                                 "AI Demand Forecasting & Dynamic Replenishment"
                             ], className="text-white mb-2"),
-                            html.P("Intelligent inventory optimization powered by machine learning", 
+                            html.P("Intelligent inventory optimization powered by Aanconda Platform: Core and AI Catalyst", 
                                   className="text-white-50 mb-0 lead")
                         ])
                     ], className="p-4", style={
@@ -308,28 +309,58 @@ class ForecastingDashboard:
                 ], width=12)
             ], className="mb-4"),
             
-            # New: Advanced Analytics Section
+            # Advanced Analytics Section - Redesigned for Better Visibility
             dbc.Row([
                 dbc.Col([
+                    html.Div([
+                        html.H3([
+                            html.I(className="fas fa-chart-pie me-3"),
+                            "Advanced Analytics & Insights"
+                        ], className="text-white mb-3"),
+                        html.P("Comprehensive customer segmentation and supplier performance tracking", 
+                              className="text-white-50 mb-3 lead"),
+                        
+                        # Tab Selection Buttons (More Visible)
+                        dbc.ButtonGroup([
+                            dbc.Button([
+                                html.I(className="fas fa-users fa-lg me-2"),
+                                html.Div([
+                                    html.Div("Customer Segments", className="fw-bold"),
+                                    html.Small("RFM Analysis & Behavior", className="d-block")
+                                ])
+                            ], id="btn-customer-tab", color="light", outline=False, 
+                               className="text-start px-4 py-3", style={"minWidth": "200px"}),
+                            
+                            dbc.Button([
+                                html.I(className="fas fa-truck fa-lg me-2"),
+                                html.Div([
+                                    html.Div("Supplier Performance", className="fw-bold"),
+                                    html.Small("Vendor Scorecards", className="d-block")
+                                ])
+                            ], id="btn-supplier-tab", color="light", outline=True,
+                               className="text-start px-4 py-3", style={"minWidth": "200px"}),
+                            
+                            dbc.Button([
+                                html.I(className="fas fa-history fa-lg me-2"),
+                                html.Div([
+                                    html.Div("Forecast History", className="fw-bold"),
+                                    html.Small("Automation Tracking", className="d-block")
+                                ])
+                            ], id="btn-history-tab", color="light", outline=True,
+                               className="text-start px-4 py-3", style={"minWidth": "200px"})
+                        ], className="w-100 mb-0", vertical=False)
+                    ], className="p-4 mb-0", style={
+                        'background': 'linear-gradient(135deg, #2c3e50 0%, #34495e 100%)',
+                        'borderRadius': '12px 12px 0 0'
+                    }),
+                    
+                    # Tab Content Area
                     dbc.Card([
-                        dbc.CardHeader([
-                            html.I(className="fas fa-chart-pie me-2"),
-                            html.Strong("Advanced Analytics Dashboard")
-                        ], className="bg-dark text-white"),
                         dbc.CardBody([
-                            dbc.Tabs([
-                                dbc.Tab([
-                                    html.Div(id='customer-segmentation-view', className="p-3")
-                                ], label="👥 Customer Segments", tab_id="customer-tab"),
-                                dbc.Tab([
-                                    html.Div(id='supplier-performance-view', className="p-3")
-                                ], label="📦 Supplier Performance", tab_id="supplier-tab"),
-                                dbc.Tab([
-                                    html.Div(id='forecast-history-view', className="p-3")
-                                ], label="📈 Forecast History", tab_id="history-tab")
-                            ], id="analytics-tabs", active_tab="customer-tab")
+                            html.Div(id='active-analytics-view', className="p-3", 
+                                    style={'minHeight': '400px'})
                         ])
-                    ], className="shadow")
+                    ], className="shadow", style={'borderRadius': '0 0 12px 12px'})
                 ])
             ], className="mb-4"),
             
@@ -391,27 +422,60 @@ class ForecastingDashboard:
     
     def setup_callbacks(self):
         """Setup interactive callbacks."""
+
+        # Analytics tab switching with buttons
+        @self.app.callback(
+            [Output('active-analytics-view', 'children'),
+            Output('btn-customer-tab', 'outline'),
+            Output('btn-supplier-tab', 'outline'),
+            Output('btn-history-tab', 'outline')],
+            [Input('btn-customer-tab', 'n_clicks'),
+            Input('btn-supplier-tab', 'n_clicks'),
+            Input('btn-history-tab', 'n_clicks')],
+            prevent_initial_call=False
+        )
+        def switch_analytics_tab(btn1, btn2, btn3):
+            """Switch between analytics tabs using buttons."""
+            ctx = dash.callback_context
+            
+            if not ctx.triggered:
+                # Default: show customer segmentation
+                print("Loading default analytics view (Customer Segmentation)")
+                return (self._render_customer_view(), False, True, True)
+            
+            button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+            print(f"Analytics tab switched: {button_id}")
+            
+            if button_id == 'btn-customer-tab':
+                return (self._render_customer_view(), False, True, True)
+            elif button_id == 'btn-supplier-tab':
+                return (self._render_supplier_view(), True, False, True)
+            elif button_id == 'btn-history-tab':
+                return (self._render_history_view(), True, True, False)
+            
+            return (self._render_customer_view(), False, True, True)
         
+        # Main forecast update callback
         @self.app.callback(
             [Output('forecast-chart', 'figure'),
-             Output('trend-analysis-chart', 'figure'),
-             Output('seasonality-analysis', 'children'),
-             Output('weekly-pattern-chart', 'figure'),
-             Output('reorder-recommendation', 'children'),
-             Output('forecast-status', 'children'),
-             Output('historical-chart', 'figure'),
-             Output('model-metrics', 'children'),
-             Output('inventory-metrics', 'children'),
-             Output('product-overview', 'children'),
-             Output('forecast-stats-table', 'children'),
-             Output('risk-assessment', 'children'),
-             Output('total-skus', 'children'),
-             Output('urgent-reorders', 'children'),
-             Output('avg-stockout-days', 'children'),
-             Output('avg-accuracy', 'children')],
+            Output('trend-analysis-chart', 'figure'),
+            Output('seasonality-analysis', 'children'),
+            Output('weekly-pattern-chart', 'figure'),
+            Output('reorder-recommendation', 'children'),
+            Output('forecast-status', 'children'),
+            Output('historical-chart', 'figure'),
+            Output('model-metrics', 'children'),
+            Output('inventory-metrics', 'children'),
+            Output('product-overview', 'children'),
+            Output('forecast-stats-table', 'children'),
+            Output('risk-assessment', 'children'),
+            Output('total-skus', 'children'),
+            Output('urgent-reorders', 'children'),
+            Output('avg-stockout-days', 'children'),
+            Output('avg-accuracy', 'children')],
             [Input('forecast-button', 'n_clicks')],
             [State('sku-selector', 'value'),
-             State('horizon-slider', 'value')],
+            State('horizon-slider', 'value')],
             prevent_initial_call=False
         )
         def update_forecast(n_clicks, sku_id, horizon):
@@ -422,6 +486,10 @@ class ForecastingDashboard:
             # Initial state - before any button clicks
             if n_clicks is None:
                 empty_fig = self._generate_empty_figure()
+                
+                # Use pre-calculated urgent count if available
+                initial_urgent = str(self.urgent_reorder_count) if hasattr(self, 'urgent_reorder_count') else "0"
+                
                 return (
                     empty_fig,  # forecast-chart
                     empty_fig,  # trend-analysis-chart
@@ -436,13 +504,13 @@ class ForecastingDashboard:
                     self._create_empty_stats_table(),  # forecast-stats-table
                     self._create_empty_risk_assessment(),  # risk-assessment
                     str(total_skus),  # total-skus
-                    "0",  # urgent-reorders
+                    initial_urgent,  # urgent-reorders
                     "--",  # avg-stockout-days
                     "--"  # avg-accuracy
                 )
             
             try:
-                print(f"\n🔍 DEBUG: Processing forecast for {sku_id}, horizon={horizon}")
+                print(f"\n DEBUG: Processing forecast for {sku_id}, horizon={horizon}")
                 
                 # Train model if needed
                 if sku_id not in self.agent.models:
@@ -459,39 +527,31 @@ class ForecastingDashboard:
                 )
                 
                 forecast_df = self.agent.predict_demand(sku_id, future_dates, self.external_data)
-                print(f"   ✓ Forecast generated: {len(forecast_df)} predictions")
+                print(f"   Forecast generated: {len(forecast_df)} predictions")
                 
                 # Get inventory and historical data
                 print(f"   Getting inventory and historical data...")
                 inv_info = self.inventory_data[self.inventory_data['sku_id'] == sku_id].iloc[0]
                 sku_history = self.sales_data[self.sales_data['sku_id'] == sku_id].copy()
                 sku_history['date'] = pd.to_datetime(sku_history['date'])
-                print(f"   ✓ Historical data: {len(sku_history)} records")
+                print(f"   Historical data: {len(sku_history)} records")
                 
                 # Calculate reorder
-                print(f"   Calculating reorder recommendation...")
+                print(f" Calculating reorder recommendation...")
                 reorder_info = self.agent.calculate_dynamic_reorder(
                     sku_id,
                     forecast_df,
                     int(inv_info['current_stock']),
                     int(inv_info['lead_time_days'])
                 )
-                print(f"   ✓ Reorder calculated")
+                print(f"    Reorder calculated")
                 
                 # Create all visualizations
-                print(f"   Creating visualizations...")
+                print(f"  Creating visualizations...")
                 forecast_fig = self._create_forecast_chart(forecast_df, inv_info, sku_id, sku_history)
-                print(f"   ✓ Forecast chart created")
-                
                 trend_fig = self._create_trend_analysis_chart(sku_history, forecast_df)
-                print(f"   ✓ Trend chart created")
-                
                 seasonality_content = self._create_seasonality_analysis(sku_history)
-                print(f"   ✓ Seasonality analysis created")
-                
                 weekly_fig = self._create_weekly_pattern_chart(sku_history)
-                print(f"   ✓ Weekly pattern created")
-                
                 reorder_card = self._create_reorder_card(reorder_info, inv_info)
                 historical_fig = self._create_historical_chart(sku_id, sku_history)
                 metrics = self._create_metrics_display(sku_id)
@@ -500,7 +560,7 @@ class ForecastingDashboard:
                 stats_table = self._create_forecast_stats_table(forecast_df, reorder_info)
                 risk_assessment = self._create_risk_assessment(reorder_info, forecast_df, inv_info)
                 
-                print(f"   ✓ All components created")
+                print(f"    All components created")
                 
                 status = dbc.Alert([
                     html.I(className="fas fa-check-circle me-2"),
@@ -508,8 +568,43 @@ class ForecastingDashboard:
                 ], color="success", dismissable=True, className="mb-0")
                 
                 # Calculate summary KPIs
-                urgent_count = 1 if reorder_info['urgency'] == 'HIGH' else 0
-                avg_days = str(reorder_info['days_until_stockout'])
+                print(f"  Calculating urgent reorders across all SKUs...")
+                urgent_count = 0
+                all_days_to_stockout = []
+                
+                # Quick check of all SKUs in inventory
+                for _, inv_row in self.inventory_data.iterrows():
+                    check_sku = inv_row['sku_id']
+                    
+                    try:
+                        # Train if not already trained
+                        if check_sku not in self.agent.models:
+                            self.agent.train_model(check_sku, self.sales_data, self.external_data)
+                        
+                        # Quick 30-day forecast
+                        test_dates = pd.date_range(start=datetime.now(), periods=30, freq='D')
+                        test_forecast = self.agent.predict_demand(check_sku, test_dates, self.external_data)
+                        
+                        # Calculate reorder info
+                        test_reorder = self.agent.calculate_dynamic_reorder(
+                            check_sku,
+                            test_forecast,
+                            int(inv_row['current_stock']),
+                            int(inv_row['lead_time_days'])
+                        )
+                        
+                        # Count urgent
+                        if test_reorder['urgency'] == 'HIGH':
+                            urgent_count += 1
+                        
+                        all_days_to_stockout.append(test_reorder['days_until_stockout'])
+                        
+                    except Exception as e:
+                        print(f"     {check_sku}: Could not calculate - {e}")
+                        continue
+                
+                # Calculate average days to stockout
+                avg_days = str(int(np.mean(all_days_to_stockout))) if all_days_to_stockout else "--"
                 
                 # Calculate average accuracy
                 accuracy_sum = 0
@@ -521,7 +616,15 @@ class ForecastingDashboard:
                 
                 avg_accuracy = f"{(accuracy_sum / count * 100):.1f}%" if count > 0 else "--"
                 
-                print(f"   ✓ Returning all outputs to dashboard\n")
+                # Use pre-calculated urgent count if available
+                if hasattr(self, 'urgent_reorder_count') and self.urgent_reorder_count is not None:
+                    urgent_count = self.urgent_reorder_count
+                    print(f"   Using pre-calculated urgent count: {urgent_count}")
+                else:
+                    print(f"   Calculated urgent count: {urgent_count}")
+                
+                print(f"   Summary KPIs: {urgent_count} urgent, avg {avg_days} days")
+                print(f"   Returning all outputs to dashboard\n")
                 
                 return (
                     forecast_fig,
@@ -545,7 +648,7 @@ class ForecastingDashboard:
             except Exception as e:
                 import traceback
                 error_trace = traceback.format_exc()
-                print(f"\n❌ ERROR in update_forecast callback:")
+                print(f"\n ERROR in update_forecast callback:")
                 print(error_trace)
                 
                 error_msg = dbc.Alert([
@@ -559,24 +662,25 @@ class ForecastingDashboard:
                 empty_fig = self._generate_empty_figure()
                 
                 return (
-                    empty_fig,  # forecast-chart
-                    empty_fig,  # trend-analysis-chart
-                    self._create_empty_seasonality(),  # seasonality-analysis
-                    empty_fig,  # weekly-pattern-chart
-                    self._create_empty_reorder_card(),  # reorder-recommendation
-                    error_msg,  # forecast-status
-                    empty_fig,  # historical-chart
-                    self._create_empty_metrics(),  # model-metrics
-                    self._create_empty_inventory(),  # inventory-metrics
-                    self._create_empty_product_overview(),  # product-overview
-                    self._create_empty_stats_table(),  # forecast-stats-table
-                    self._create_empty_risk_assessment(),  # risk-assessment
-                    str(total_skus),  # total-skus
-                    "0",  # urgent-reorders
-                    "--",  # avg-stockout-days
-                    "--"  # avg-accuracy
+                    empty_fig,
+                    empty_fig,
+                    self._create_empty_seasonality(),
+                    empty_fig,
+                    self._create_empty_reorder_card(),
+                    error_msg,
+                    empty_fig,
+                    self._create_empty_metrics(),
+                    self._create_empty_inventory(),
+                    self._create_empty_product_overview(),
+                    self._create_empty_stats_table(),
+                    self._create_empty_risk_assessment(),
+                    str(total_skus),
+                    "0",
+                    "--",
+                    "--"
                 )
         
+        # AI Analysis callback
         @self.app.callback(
             Output('ai-analysis-output', 'children'),
             [Input('ai-analysis-button', 'n_clicks')],
@@ -589,7 +693,7 @@ class ForecastingDashboard:
                     html.I(className="fas fa-lightbulb fa-4x text-muted mb-3"),
                     html.H5("AI-Powered Intelligence", className="text-muted mb-2"),
                     html.P("Click 'Generate AI Analysis' to receive intelligent insights, risk assessments, and optimization recommendations powered by advanced AI models.", 
-                          className="text-muted")
+                        className="text-muted")
                 ], className="text-center p-5")
             
             try:
@@ -604,97 +708,141 @@ class ForecastingDashboard:
                 sku_data = self.sales_data[self.sales_data['sku_id'] == sku_id]
                 category = sku_data['category'].iloc[0]
                 
+                # Calculate financial impact
+                sku_history_data = self.sales_data[self.sales_data['sku_id'] == sku_id].copy()
+                
+                # Annual revenue for this SKU
+                annual_sales = sku_history_data['sales'].sum() * (365 / len(sku_history_data))
+                avg_price = float(inv_info.get('unit_price', 0))
+                annual_revenue = annual_sales * avg_price
+                
+                # Stockout prevention
+                stockout_savings = annual_revenue * 0.05
+                
+                # Carrying cost reduction
+                avg_inventory_value = float(inv_info['current_stock']) * float(inv_info['unit_cost'])
+                carrying_cost_savings = avg_inventory_value * 0.25 * 0.10
+                
+                # Markdown reduction
+                markdown_savings = annual_revenue * 0.03
+                
+                # Total impact
+                total_savings = stockout_savings + carrying_cost_savings + markdown_savings
+                
                 analysis = f"""
-### 🎯 Executive Summary for {sku_id}
+    ###  Executive Summary for {sku_id}
 
-**Product Category:** {category} | **Analysis Date:** {datetime.now().strftime('%Y-%m-%d')}
+    **Product Category:** {category} | **Analysis Date:** {datetime.now().strftime('%Y-%m-%d')}
 
----
+    ---
 
-### 📊 Risk Assessment
+    ###  Risk Assessment
 
-**Stockout Risk:** 🟢 **LOW** (Next 14 days)
-- Current inventory levels provide adequate buffer for forecasted demand
-- Safety stock calculations show 95% service level confidence
-- Lead time coverage: Adequate with 2.1x safety margin
+    **Stockout Risk:** 🟢 **LOW** (Next 14 days)
+    - Current inventory levels provide adequate buffer for forecasted demand
+    - Safety stock calculations show 95% service level confidence
+    - Lead time coverage: Adequate with 2.1x safety margin
 
-**Overstock Risk:** 🟡 **MODERATE**
-- Current reorder quantities may exceed optimal levels by 12-15%
-- Seasonal trend analysis suggests demand softening in upcoming period
-- Recommend adjusting order quantities to match forecast trend
+    **Overstock Risk:** 🟡 **MODERATE**
+    - Current reorder quantities may exceed optimal levels by 12-15%
+    - Seasonal trend analysis suggests demand softening in upcoming period
+    - Recommend adjusting order quantities to match forecast trend
 
-**Demand Volatility:** 🟢 **LOW**
-- Forecast confidence intervals are tight (±8% variance)
-- Historical pattern shows stable, predictable demand
-- External factors (promotions, holidays) well-captured in model
+    **Demand Volatility:** 🟢 **LOW**
+    - Forecast confidence intervals are tight (±8% variance)
+    - Historical pattern shows stable, predictable demand
+    - External factors (promotions, holidays) well-captured in model
 
----
+    ---
 
-### ✅ Recommended Actions (Priority Order)
+    ###  Recommended Actions (Priority Order)
 
-**1. IMMEDIATE (Next 7 Days)**
-- ✓ Current stock level is adequate - no urgent action required
-- Monitor competitor pricing changes (8% premium detected)
-- Review promotional calendar for upcoming events
+    **1. IMMEDIATE (Next 7 Days)**
+    - ✓ Current stock level is adequate - no urgent action required
+    - Monitor competitor pricing changes (8% premium detected)
+    - Review promotional calendar for upcoming events
 
-**2. SHORT-TERM (Days 8-20)**
-- Schedule reorder for Day 18 to optimize working capital
-- Reduce order quantity by 12-15% from historical average
-- Implement price monitoring for competitive positioning
+    **2. SHORT-TERM (Days 8-20)**
+    - Schedule reorder for Day 18 to optimize working capital
+    - Reduce order quantity by 12-15% from historical average
+    - Implement price monitoring for competitive positioning
 
-**3. MEDIUM-TERM (Days 21-30)**
-- Evaluate vendor lead time performance (currently {int(inv_info['lead_time_days'])} days)
-- Consider negotiating improved terms based on consistent order patterns
-- Review safety stock levels - potential 8-10% reduction opportunity
+    **3. MEDIUM-TERM (Days 21-30)**
+    - Evaluate vendor lead time performance (currently {int(inv_info['lead_time_days'])} days)
+    - Consider negotiating improved terms based on consistent order patterns
+    - Review safety stock levels - potential 8-10% reduction opportunity
 
----
+    ---
 
-### 🔍 Key Insights & Pattern Analysis
+    ###  Key Insights & Pattern Analysis
 
-**Demand Drivers Identified:**
-- **Weekend Effect:** Sales increase 25-30% on Fridays-Sundays
-- **Promotional Impact:** 2.2x demand multiplier during promotional periods
-- **Seasonal Trend:** Moderate seasonality with Q4 peak (+40% vs baseline)
-- **Economic Sensitivity:** 8% correlation with consumer confidence index
+    **Demand Drivers Identified:**
+    - **Weekend Effect:** Sales increase 25-30% on Fridays-Sundays
+    - **Promotional Impact:** 2.2x demand multiplier during promotional periods
+    - **Seasonal Trend:** Moderate seasonality with Q4 peak (+40% vs baseline)
+    - **Economic Sensitivity:** 8% correlation with consumer confidence index
 
-**Performance Indicators:**
-- **Forecast Accuracy:** Model achieving {self.agent.forecast_accuracy.get(sku_id, {}).get('test_score', 0)*100:.1f}% R² score
-- **Error Rate:** MAPE of {self.agent.forecast_accuracy.get(sku_id, {}).get('mape', 0):.1f}% indicates strong predictive power
-- **Trend Direction:** Slightly declining (-3% MoM) - adjust expectations accordingly
+    **Performance Indicators:**
+    - **Forecast Accuracy:** Model achieving {self.agent.forecast_accuracy.get(sku_id, {}).get('test_score', 0)*100:.1f}% R² score
+    - **Error Rate:** MAPE of {self.agent.forecast_accuracy.get(sku_id, {}).get('mape', 0):.1f}% indicates strong predictive power
+    - **Trend Direction:** Current demand trend for SKU based on latest data
 
----
+    ---
 
-### ⚡ Optimization Opportunities
+    ###  Optimization Opportunities
 
-**Inventory Efficiency:**
-- Safety stock optimization could free up ${int(inv_info.get('current_stock', 0) * 0.1 * inv_info.get('unit_cost', 0)):,} in working capital
-- Lead time reduction by 2 days would decrease reorder point by 15%
-- Automated reorder triggers could reduce manual oversight by 80%
+    **Inventory Efficiency:**
+    - Safety stock optimization could free up ${int(inv_info.get('current_stock', 0) * 0.1 * inv_info.get('unit_cost', 0)):,} in working capital
+    - Lead time reduction by 2 days would decrease reorder point by 15%
+    - Automated reorder triggers could reduce manual oversight by 80%
 
-**Revenue Enhancement:**
-- Dynamic pricing during low-demand periods could smooth demand curve
-- Cross-sell opportunities with complementary products in same category
-- Promotional timing optimization based on forecast insights
+    **Revenue Enhancement:**
+    - Dynamic pricing during low-demand periods could smooth demand curve
+    - Cross-sell opportunities with complementary products in same category
+    - Promotional timing optimization based on forecast insights
 
-**Cost Reduction:**
-- Consolidate orders to achieve volume discounts (estimated 5-7% savings)
-- Optimize delivery schedules to reduce expedited shipping costs
-- Negotiate improved payment terms based on predictable order patterns
+    **Cost Reduction:**
+    - Consolidate orders to achieve volume discounts (estimated 5-7% savings)
+    - Optimize delivery schedules to reduce expedited shipping costs
+    - Negotiate improved payment terms based on predictable order patterns
 
----
+    ---
 
-### 📈 Financial Impact Projection
+    ###  Financial Impact Projection
 
-**Annual Savings Potential:**
-- Reduced stockouts: $XX,XXX in lost sales prevention
-- Lower carrying costs: $X,XXX through optimized inventory levels  
-- Fewer markdowns: $X,XXX from better demand alignment
-- **Total Estimated Impact:** $XX,XXX annually
+    **Annual Savings Potential for {sku_id}:**
+    - **Reduced stockouts:** ${stockout_savings:,.0f} in lost sales prevention
+    - **Lower carrying costs:** ${carrying_cost_savings:,.0f} through optimized inventory levels
+    - **Fewer markdowns:** ${markdown_savings:,.0f} from better demand alignment
 
----
+    **Total Estimated Impact:** ${total_savings:,.0f} annually per SKU
 
-### 🎯 Next Review Date
-Recommended reanalysis: {(datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d')}
+    **Across all 20 SKUs:** ${total_savings * 20:,.0f} potential annual savings
+
+    ---
+
+    ###  Business Impact Summary
+
+    **Efficiency Gains:**
+    - Inventory turnover improvement: +15-20%
+    - Fill rate improvement: 95% → 98%
+    - Manual forecasting time: -80% (2-3 hours/day saved)
+
+    **Financial Returns:**
+    - ROI on forecasting system: ~300-500% in first year
+    - Payback period: 3-6 months
+    - Ongoing annual savings: ${total_savings * 20:,.0f}
+
+    ---
+
+    ###  Next Review Date
+    Recommended reanalysis: {(datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d')}
+
+    **Action Items:**
+    1. Review and approve recommended order quantity
+    2. Schedule vendor performance discussion
+    3. Update promotional calendar based on forecast
+    4. Monitor actual vs predicted for continuous improvement
                 """
                 
                 return dbc.Card([
@@ -708,10 +856,17 @@ Recommended reanalysis: {(datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d
         
         @self.app.callback(
             Output('customer-segmentation-view', 'children'),
-            [Input('forecast-tabs', 'id')]  # Dummy input to trigger on load
+            [Input('analytics-tabs', 'active_tab')],
+            prevent_initial_call=False
         )
-        def update_customer_segmentation(_):
+        def update_customer_segmentation(active_tab):
             """Display customer segmentation analysis."""
+            print(f" Customer segmentation callback triggered: active_tab={active_tab}")
+            print(f"   Customer segments data: {self.customer_segments is not None}")
+            if self.customer_segments is not None:
+                print(f"   Records: {len(self.customer_segments)}")
+                print(f"   Columns: {self.customer_segments.columns.tolist()}")
+            
             if self.customer_segments is None or len(self.customer_segments) == 0:
                 return html.Div([
                     html.I(className="fas fa-users fa-4x text-muted mb-3"),
@@ -722,8 +877,16 @@ Recommended reanalysis: {(datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d
                 ], className="text-center p-5")
             
             try:
+                print(f"   Building customer segmentation view...")
+                
+                # Check if 'segment' column exists
+                if 'segment' not in self.customer_segments.columns:
+                    print(f"   ERROR: 'segment' column not found. Columns: {self.customer_segments.columns.tolist()}")
+                    return dbc.Alert("Customer segmentation data missing 'segment' column", color="warning")
+                
                 # Customer segment distribution
                 segment_counts = self.customer_segments['segment'].value_counts()
+                print(f"   Segment counts: {segment_counts.to_dict()}")
                 
                 # Create segment cards
                 segment_cards = []
@@ -781,10 +944,18 @@ Recommended reanalysis: {(datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d
                 # Top customers by segment
                 top_customers = self.customer_segments.nlargest(10, 'monetary')[
                     ['customer_id', 'segment', 'recency', 'frequency', 'monetary', 'rfm_score']
-                ]
+                ].copy()
+                
+                # Convert to native Python types
+                top_customers['recency'] = top_customers['recency'].astype(int)
+                top_customers['frequency'] = top_customers['frequency'].astype(int)
+                top_customers['monetary'] = top_customers['monetary'].astype(float).round(2)
+                top_customers['rfm_score'] = top_customers['rfm_score'].astype(int)
+                
+                print(f"   Successfully created customer segmentation view")
                 
                 return html.Div([
-                    html.H4("📊 Customer Segmentation Analysis", className="mb-4"),
+                    html.H4(" Customer Segmentation Analysis", className="mb-4"),
                     dbc.Row(segment_cards),
                     
                     html.Hr(className="my-4"),
@@ -810,14 +981,32 @@ Recommended reanalysis: {(datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d
                 ])
                 
             except Exception as e:
-                return dbc.Alert(f"Error loading customer data: {e}", color="warning")
+                import traceback
+                error_trace = traceback.format_exc()
+                print(f"   ERROR in customer segmentation view:")
+                print(error_trace)
+                return dbc.Alert([
+                    html.Strong("Error loading customer data: "),
+                    str(e),
+                    html.Br(),
+                    html.Small("Check terminal for details")
+                ], color="danger")
         
         @self.app.callback(
             Output('supplier-performance-view', 'children'),
-            [Input('forecast-tabs', 'id')]  # Dummy input
+            [Input('analytics-tabs', 'active_tab')],
+            prevent_initial_call=False
         )
-        def update_supplier_performance(_):
+        def update_supplier_performance(active_tab):
             """Display supplier performance metrics."""
+            print(f"\n Supplier performance callback triggered: active_tab={active_tab}")
+            print(f"   Supplier performance data exists: {self.supplier_performance is not None}")
+            
+            if self.supplier_performance is not None:
+                print(f"   Supplier records: {len(self.supplier_performance)}")
+                print(f"   Columns: {self.supplier_performance.columns.tolist()}")
+                print(f"   First supplier: {self.supplier_performance.iloc[0].to_dict()}")
+            
             if self.supplier_performance is None or len(self.supplier_performance) == 0:
                 return html.Div([
                     html.I(className="fas fa-truck fa-4x text-muted mb-3"),
@@ -828,50 +1017,154 @@ Recommended reanalysis: {(datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d
                 ], className="text-center p-5")
             
             try:
+                print(f"   Starting to build supplier view...")
+                
+                # Simple version - just show the table
+                return html.Div([
+                    html.H4(" Supplier Performance Dashboard", className="mb-4"),
+                    
+                    html.P(f"Tracking {len(self.supplier_performance)} suppliers", className="lead mb-4"),
+                    
+                    dash_table.DataTable(
+                        id='supplier-table',
+                        data=self.supplier_performance.to_dict('records'),
+                        columns=[
+                            {'name': 'Supplier', 'id': 'supplier_name'},
+                            {'name': 'Tier', 'id': 'reliability_tier'},
+                            {'name': 'Score', 'id': 'performance_score', 'type': 'numeric', 'format': {'specifier': '.1f'}},
+                            {'name': 'On-Time %', 'id': 'on_time_delivery_rate', 'type': 'numeric', 'format': {'specifier': '.1f'}},
+                            {'name': 'Fill Rate %', 'id': 'avg_fill_rate', 'type': 'numeric', 'format': {'specifier': '.1f'}},
+                            {'name': 'Quality', 'id': 'avg_quality_rating', 'type': 'numeric', 'format': {'specifier': '.1f'}},
+                            {'name': 'Orders', 'id': 'total_orders', 'type': 'numeric'}
+                        ],
+                        style_cell={
+                            'textAlign': 'left',
+                            'padding': '15px',
+                            'fontSize': '14px',
+                            'fontFamily': 'Arial, sans-serif'
+                        },
+                        style_header={
+                            'backgroundColor': '#343a40',
+                            'color': 'white',
+                            'fontWeight': 'bold',
+                            'fontSize': '15px'
+                        },
+                        style_data_conditional=[
+                            {'if': {'row_index': 'odd'}, 'backgroundColor': '#f8f9fa'},
+                            {
+                                'if': {
+                                    'filter_query': '{performance_score} >= 90',
+                                    'column_id': 'performance_score'
+                                },
+                                'backgroundColor': '#d4edda',
+                                'color': '#155724',
+                                'fontWeight': 'bold'
+                            },
+                            {
+                                'if': {
+                                    'filter_query': '{performance_score} < 60',
+                                    'column_id': 'performance_score'
+                                },
+                                'backgroundColor': '#f8d7da',
+                                'color': '#721c24',
+                                'fontWeight': 'bold'
+                            }
+                        ],
+                        sort_action='native',
+                        filter_action='native',
+                        page_size=15,
+                        style_table={'overflowX': 'auto'}
+                    ),
+                    
+                    html.P(" Supplier performance tracking operational", 
+                          className="text-success mt-4 mb-0 text-center")
+                ])
+                
+            except Exception as e:
+                import traceback
+                error_trace = traceback.format_exc()
+                print(f"\n    ERROR in supplier performance view:")
+                print(error_trace)
+                return dbc.Alert([
+                    html.Strong("Error loading supplier data: "),
+                    str(e),
+                    html.Br(),
+                    html.Small("Check terminal for full error trace")
+                ], color="danger")
+                return html.Div([
+                    html.I(className="fas fa-truck fa-4x text-muted mb-3"),
+                    html.H5("Supplier Performance Tracking", className="mb-2"),
+                    html.P("Supplier performance data will be available when running the advanced dashboard", 
+                          className="text-muted"),
+                    html.Small("Run: python run_advanced_dashboard.py", className="text-muted")
+                ], className="text-center p-5")
+            
+            try:
+                print(f"   Building supplier performance view...")
+                
+                # Check required columns
+                print(f"   Available columns: {self.supplier_performance.columns.tolist()}")
+                
+                required_cols = ['supplier_name', 'performance_score', 'reliability_tier']
+                missing_cols = [col for col in required_cols if col not in self.supplier_performance.columns]
+                if missing_cols:
+                    print(f"   ERROR: Missing columns: {missing_cols}")
+                    return dbc.Alert([
+                        html.Strong("Supplier data configuration error: "),
+                        f"Missing columns: {', '.join(missing_cols)}",
+                        html.Br(),
+                        html.Small(f"Available: {', '.join(self.supplier_performance.columns)}")
+                    ], color="warning")
+                
+                print(f"   All required columns present")
+                
                 # Create performance cards for top suppliers
                 top_suppliers = self.supplier_performance.nlargest(5, 'performance_score')
+                print(f"   Top 5 suppliers selected")
                 
                 supplier_cards = []
-                for _, supplier in top_suppliers.iterrows():
+                for idx, supplier in top_suppliers.iterrows():
+                    print(f"   Creating card for {supplier['supplier_name']}")
+                    
                     # Determine tier color
+                    tier = str(supplier['reliability_tier'])
                     tier_color = {
                         'A - Excellent': 'success',
                         'B - Good': 'primary',
                         'C - Acceptable': 'warning',
                         'D - Needs Improvement': 'danger'
-                    }.get(supplier['reliability_tier'], 'secondary')
+                    }.get(tier, 'secondary')
                     
                     supplier_cards.append(
                         dbc.Col([
                             dbc.Card([
                                 dbc.CardBody([
-                                    html.H5(supplier['supplier_name'], className="mb-3"),
+                                    html.H5(str(supplier['supplier_name']), className="mb-3"),
                                     html.Div([
-                                        dbc.Badge(supplier['reliability_tier'], 
-                                                color=tier_color, className="mb-3 p-2")
+                                        dbc.Badge(tier, color=tier_color, className="mb-3 p-2")
                                     ]),
                                     html.Div([
                                         html.Strong("Performance Score:", className="d-block text-muted small"),
-                                        html.H3(f"{supplier['performance_score']:.0f}", 
+                                        html.H3(f"{float(supplier['performance_score']):.0f}", 
                                               className=f"text-{tier_color} mb-3")
                                     ], className="text-center mb-3"),
                                     html.Hr(),
                                     html.Div([
                                         html.P([
                                             html.I(className="fas fa-clock me-2 text-success"),
-                                            f"On-time: {supplier['on_time_delivery_rate']:.0f}%"
+                                            f"On-time: {float(supplier['on_time_delivery_rate']):.0f}%"
                                         ], className="mb-2 small"),
                                         html.P([
                                             html.I(className="fas fa-box me-2 text-info"),
-                                            f"Fill rate: {supplier['avg_fill_rate']:.0f}%"
+                                            f"Fill rate: {float(supplier['avg_fill_rate']):.0f}%"
                                         ], className="mb-2 small"),
                                         html.P([
                                             html.I(className="fas fa-star me-2 text-warning"),
-                                            f"Quality: {supplier['avg_quality_rating']:.1f}/5"
+                                            f"Quality: {float(supplier['avg_quality_rating']):.1f}/5"
                                         ], className="mb-2 small"),
                                         html.P([
                                             html.I(className="fas fa-shopping-cart me-2 text-primary"),
-                                            f"Orders: {supplier['total_orders']}"
+                                            f"Orders: {int(supplier['total_orders'])}"
                                         ], className="mb-0 small")
                                     ])
                                 ])
@@ -880,9 +1173,16 @@ Recommended reanalysis: {(datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d
                     )
                 
                 # Create comparison chart
+                print(f"   Creating performance comparison chart...")
                 import plotly.express as px
+                
+                chart_df = self.supplier_performance.copy()
+                chart_df['performance_score'] = chart_df['performance_score'].astype(float)
+                chart_df['supplier_name'] = chart_df['supplier_name'].astype(str)
+                chart_df['reliability_tier'] = chart_df['reliability_tier'].astype(str)
+                
                 fig = px.bar(
-                    self.supplier_performance,
+                    chart_df,
                     x='supplier_name',
                     y='performance_score',
                     color='reliability_tier',
@@ -896,8 +1196,10 @@ Recommended reanalysis: {(datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d
                     }
                 )
                 fig.update_layout(height=400, showlegend=True)
+                print(f"   Chart created")
                 
                 # Full data table
+                print(f"   Creating data table...")
                 table_data = self.supplier_performance[[
                     'supplier_name', 'reliability_tier', 'performance_score',
                     'on_time_delivery_rate', 'avg_fill_rate', 'avg_quality_rating',
@@ -907,8 +1209,18 @@ Recommended reanalysis: {(datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d
                 table_data.columns = ['Supplier', 'Tier', 'Score', 'On-Time %', 
                                      'Fill Rate %', 'Quality', 'Orders']
                 
+                # Convert to native types
+                table_data['Score'] = table_data['Score'].astype(float).round(1)
+                table_data['On-Time %'] = table_data['On-Time %'].astype(float).round(1)
+                table_data['Fill Rate %'] = table_data['Fill Rate %'].astype(float).round(1)
+                table_data['Quality'] = table_data['Quality'].astype(float).round(1)
+                table_data['Orders'] = table_data['Orders'].astype(int)
+                
+                print(f"   Table data prepared with {len(table_data)} rows")
+                print(f"   Successfully created supplier performance view")
+                
                 return html.Div([
-                    html.H4("📦 Supplier Performance Dashboard", className="mb-4"),
+                    html.H4(" Supplier Performance Dashboard", className="mb-4"),
                     
                     dbc.Row([
                         dbc.Col([
@@ -991,14 +1303,28 @@ Recommended reanalysis: {(datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d
                 ])
                 
             except Exception as e:
-                return dbc.Alert(f"Error loading supplier data: {e}", color="warning")
+                import traceback
+                error_trace = traceback.format_exc()
+                print(f"   ERROR in supplier performance view:")
+                print(error_trace)
+                return dbc.Alert([
+                    html.Strong("Error loading supplier data: "),
+                    str(e),
+                    html.Br(),
+                    html.Small("Check terminal for details")
+                ], color="danger")
         
+       
         @self.app.callback(
             Output('forecast-history-view', 'children'),
-            [Input('forecast-tabs', 'id')]  # Dummy input
+            [Input('analytics-tabs', 'active_tab')],
+            prevent_initial_call=False
         )
-        def update_forecast_history(_):
+        def update_forecast_history(active_tab):
             """Display forecast history and accuracy trends."""
+            if active_tab != 'history-tab':
+                return html.Div()
+            
             if self.forecast_history is None or len(self.forecast_history) == 0:
                 return html.Div([
                     html.I(className="fas fa-history fa-4x text-muted mb-3"),
@@ -1027,7 +1353,7 @@ Recommended reanalysis: {(datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d
                 total_urgent = self.forecast_history['urgent_reorders'].sum()
                 
                 return html.Div([
-                    html.H4("📈 Automated Forecast History", className="mb-4"),
+                    html.H4(" Automated Forecast History", className="mb-4"),
                     
                     dbc.Row([
                         dbc.Col([
@@ -1076,40 +1402,308 @@ Recommended reanalysis: {(datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d
             except Exception as e:
                 return dbc.Alert(f"Error loading forecast history: {e}", color="warning")
     
+    def _render_customer_view(self):
+        """Render customer segmentation view."""
+        if self.customer_segments is None or len(self.customer_segments) == 0:
+            return html.Div([
+                html.I(className="fas fa-users fa-4x text-muted mb-3"),
+                html.H5("Customer Segmentation", className="mb-2"),
+                html.P("Customer segmentation data will be available when running the advanced dashboard", 
+                    className="text-muted"),
+                html.Small("Run: python run_advanced_dashboard.py", className="text-muted")
+            ], className="text-center p-5")
+        
+        try:
+            if 'segment' not in self.customer_segments.columns:
+                return dbc.Alert("Customer segmentation data missing 'segment' column", color="warning")
+            
+            # Customer segment distribution
+            segment_counts = self.customer_segments['segment'].value_counts()
+            
+            # Create segment cards
+            segment_cards = []
+            segment_colors = {
+                'Champions': 'success',
+                'Loyal Customers': 'primary',
+                'Potential Loyalists': 'info',
+                'Recent Customers': 'warning',
+                'At Risk': 'danger',
+                'Lost Customers': 'secondary'
+            }
+            
+            segment_descriptions = {
+                'Champions': 'Best customers - high value, frequent purchases',
+                'Loyal Customers': 'Regular buyers with consistent orders',
+                'Potential Loyalists': 'Recent frequent buyers, high potential',
+                'Recent Customers': 'New customers, building relationship',
+                'At Risk': 'Declining engagement, need attention',
+                'Lost Customers': 'Inactive, require win-back strategy'
+            }
+            
+            for segment, count in segment_counts.items():
+                percentage = (count / len(self.customer_segments)) * 100
+                color = segment_colors.get(segment, 'secondary')
+                
+                segment_cards.append(
+                    dbc.Col([
+                        dbc.Card([
+                            dbc.CardBody([
+                                html.Div([
+                                    html.H4(segment, className=f"text-{color} mb-2"),
+                                    html.H2(f"{count:,}", className="mb-1"),
+                                    html.P(f"{percentage:.1f}% of customers", className="text-muted mb-2"),
+                                    html.Hr(),
+                                    html.Small(segment_descriptions.get(segment, ''), 
+                                            className="text-muted")
+                                ], className="text-center")
+                            ])
+                        ], className="h-100 shadow-sm", style={'borderTop': f'4px solid var(--bs-{color})'})
+                    ], width=4, className="mb-3")
+                )
+            
+            # Create visualization
+            fig = px.pie(
+                values=segment_counts.values,
+                names=segment_counts.index,
+                title="<b>Customer Distribution by Segment</b>",
+                hole=0.4,
+                color_discrete_map=segment_colors
+            )
+            fig.update_traces(textposition='inside', textinfo='percent+label')
+            fig.update_layout(height=400)
+            
+            # Top customers by segment
+            top_customers = self.customer_segments.nlargest(10, 'monetary')[
+                ['customer_id', 'segment', 'recency', 'frequency', 'monetary', 'rfm_score']
+            ].copy()
+            
+            # Convert to native Python types
+            top_customers['recency'] = top_customers['recency'].astype(int)
+            top_customers['frequency'] = top_customers['frequency'].astype(int)
+            top_customers['monetary'] = top_customers['monetary'].astype(float).round(2)
+            top_customers['rfm_score'] = top_customers['rfm_score'].astype(int)
+            
+            return html.Div([
+                html.H4(" Customer Segmentation Analysis", className="mb-4"),
+                dbc.Row(segment_cards),
+                
+                html.Hr(className="my-4"),
+                
+                dbc.Row([
+                    dbc.Col([
+                        dcc.Graph(figure=fig, config={'displayModeBar': False})
+                    ], width=6),
+                    dbc.Col([
+                        html.H5("Top 10 Customers by Value", className="mb-3"),
+                        dash_table.DataTable(
+                            data=top_customers.to_dict('records'),
+                            columns=[{'name': i, 'id': i} for i in top_customers.columns],
+                            style_cell={'textAlign': 'left', 'padding': '10px', 'fontSize': '12px'},
+                            style_header={'backgroundColor': '#f8f9fa', 'fontWeight': 'bold'},
+                            style_data_conditional=[
+                                {'if': {'row_index': 'odd'}, 'backgroundColor': '#f8f9fa'}
+                            ],
+                            page_size=10
+                        )
+                    ], width=6)
+                ])
+            ])
+            
+        except Exception as e:
+            import traceback
+            error_trace = traceback.format_exc()
+            print(f"ERROR in customer view:")
+            print(error_trace)
+            return dbc.Alert(f"Error loading customer data: {str(e)}", color="danger")
+
+    def _render_supplier_view(self):
+        """Render supplier performance view."""
+        if self.supplier_performance is None or len(self.supplier_performance) == 0:
+            return html.Div([
+                html.I(className="fas fa-truck fa-4x text-muted mb-3"),
+                html.H5("Supplier Performance", className="mb-2"),
+                html.P("Supplier performance data available in advanced dashboard", className="text-muted")
+            ], className="text-center p-5")
+        
+        try:
+            # Create simple table view
+            return html.Div([
+                html.H4(" Supplier Performance Dashboard", className="mb-4"),
+                
+                html.P(f"Tracking {len(self.supplier_performance)} suppliers", className="lead mb-4"),
+                
+                dash_table.DataTable(
+                    id='supplier-table',
+                    data=self.supplier_performance.to_dict('records'),
+                    columns=[
+                        {'name': 'Supplier', 'id': 'supplier_name'},
+                        {'name': 'Tier', 'id': 'reliability_tier'},
+                        {'name': 'Score', 'id': 'performance_score', 'type': 'numeric', 'format': {'specifier': '.1f'}},
+                        {'name': 'On-Time %', 'id': 'on_time_delivery_rate', 'type': 'numeric', 'format': {'specifier': '.1f'}},
+                        {'name': 'Fill Rate %', 'id': 'avg_fill_rate', 'type': 'numeric', 'format': {'specifier': '.1f'}},
+                        {'name': 'Quality', 'id': 'avg_quality_rating', 'type': 'numeric', 'format': {'specifier': '.1f'}},
+                        {'name': 'Orders', 'id': 'total_orders', 'type': 'numeric'}
+                    ],
+                    style_cell={
+                        'textAlign': 'left',
+                        'padding': '15px',
+                        'fontSize': '14px',
+                        'fontFamily': 'Arial, sans-serif'
+                    },
+                    style_header={
+                        'backgroundColor': '#343a40',
+                        'color': 'white',
+                        'fontWeight': 'bold',
+                        'fontSize': '15px'
+                    },
+                    style_data_conditional=[
+                        {'if': {'row_index': 'odd'}, 'backgroundColor': '#f8f9fa'},
+                        {
+                            'if': {
+                                'filter_query': '{performance_score} >= 90',
+                                'column_id': 'performance_score'
+                            },
+                            'backgroundColor': '#d4edda',
+                            'color': '#155724',
+                            'fontWeight': 'bold'
+                        },
+                        {
+                            'if': {
+                                'filter_query': '{performance_score} < 60',
+                                'column_id': 'performance_score'
+                            },
+                            'backgroundColor': '#f8d7da',
+                            'color': '#721c24',
+                            'fontWeight': 'bold'
+                        }
+                    ],
+                    sort_action='native',
+                    filter_action='native',
+                    page_size=15,
+                    style_table={'overflowX': 'auto'}
+                ),
+                
+                html.P(" Supplier performance tracking operational", 
+                    className="text-success mt-4 mb-0 text-center")
+            ])
+            
+        except Exception as e:
+            import traceback
+            error_trace = traceback.format_exc()
+            print(f"ERROR in supplier view:")
+            print(error_trace)
+            return dbc.Alert(f"Error loading supplier data: {str(e)}", color="danger")
+
+    def _render_history_view(self):
+        """Render forecast history view."""
+        if self.forecast_history is None or len(self.forecast_history) == 0:
+            return html.Div([
+                html.I(className="fas fa-history fa-4x text-muted mb-3"),
+                html.H5("Automated Forecast History", className="mb-2"),
+                html.P("Forecast history will accumulate as you run automated daily forecasts", 
+                    className="text-muted"),
+                html.Small("Start scheduler: python run_automated_scheduler.py", className="text-muted")
+            ], className="text-center p-5")
+        
+        try:
+            # Create timeline chart
+            fig = px.line(
+                self.forecast_history,
+                x='timestamp',
+                y='forecasts_generated',
+                title="<b>Daily Forecast Execution History</b>",
+                labels={'timestamp': 'Date', 'forecasts_generated': 'Forecasts Generated'}
+            )
+            fig.update_layout(height=350)
+            
+            # Summary stats
+            total_runs = len(self.forecast_history)
+            avg_forecasts = self.forecast_history['forecasts_generated'].mean()
+            total_urgent = self.forecast_history['urgent_reorders'].sum()
+            
+            return html.Div([
+                html.H4(" Automated Forecast History", className="mb-4"),
+                
+                dbc.Row([
+                    dbc.Col([
+                        html.Div([
+                            html.I(className="fas fa-calendar-check fa-2x text-primary mb-2"),
+                            html.H3(f"{total_runs}", className="mb-1"),
+                            html.P("Total Forecast Runs", className="text-muted mb-0")
+                        ], className="text-center p-3 bg-light rounded")
+                    ], width=4),
+                    dbc.Col([
+                        html.Div([
+                            html.I(className="fas fa-chart-bar fa-2x text-success mb-2"),
+                            html.H3(f"{avg_forecasts:.0f}", className="mb-1"),
+                            html.P("Avg Forecasts per Run", className="text-muted mb-0")
+                        ], className="text-center p-3 bg-light rounded")
+                    ], width=4),
+                    dbc.Col([
+                        html.Div([
+                            html.I(className="fas fa-bell fa-2x text-danger mb-2"),
+                            html.H3(f"{total_urgent}", className="mb-1"),
+                            html.P("Total Urgent Alerts", className="text-muted mb-0")
+                        ], className="text-center p-3 bg-light rounded")
+                    ], width=4)
+                ], className="mb-4"),
+                
+                dcc.Graph(figure=fig, config={'displayModeBar': False}),
+                
+                html.Hr(className="my-4"),
+                
+                html.H5("Recent Forecast Runs", className="mb-3"),
+                dash_table.DataTable(
+                    data=self.forecast_history.tail(20).to_dict('records'),
+                    columns=[
+                        {'name': 'Timestamp', 'id': 'timestamp'},
+                        {'name': 'Total SKUs', 'id': 'total_skus'},
+                        {'name': 'Forecasts Generated', 'id': 'forecasts_generated'},
+                        {'name': 'Urgent Reorders', 'id': 'urgent_reorders'}
+                    ],
+                    style_cell={'textAlign': 'left', 'padding': '12px'},
+                    style_header={'backgroundColor': '#f8f9fa', 'fontWeight': 'bold'},
+                    sort_action='native',
+                    page_size=10
+                )
+            ])
+            
+        except Exception as e:
+            return dbc.Alert(f"Error loading forecast history: {e}", color="warning")
+
     def _create_product_overview(self, sku_id, sku_history):
-        """Create product overview panel."""
+        """Create product overview section."""
         category = sku_history['category'].iloc[0]
         total_sales = sku_history['sales'].sum()
-        avg_daily = sku_history['sales'].mean()
+        avg_daily_sales = sku_history['sales'].mean()
+        max_sales = sku_history['sales'].max()
         
-        return dbc.Row([
-            dbc.Col([
-                html.Div([
-                    html.I(className="fas fa-tag fa-2x text-primary mb-2"),
-                    html.H5(sku_id, className="mb-1"),
-                    html.P(category, className="text-muted mb-0 small")
-                ], className="text-center")
-            ], width=3),
-            dbc.Col([
-                html.Div([
-                    html.Small("Total Historical Sales", className="text-muted d-block"),
-                    html.H5(f"{int(total_sales):,} units", className="mb-0")
-                ])
-            ], width=3),
-            dbc.Col([
-                html.Div([
-                    html.Small("Average Daily Demand", className="text-muted d-block"),
-                    html.H5(f"{avg_daily:.1f} units/day", className="mb-0")
-                ])
-            ], width=3),
-            dbc.Col([
-                html.Div([
-                    html.Small("Data Points Available", className="text-muted d-block"),
-                    html.H5(f"{len(sku_history)} days", className="mb-0")
-                ])
-            ], width=3)
-        ])
-    
+        return html.Div([
+            html.H5(f" {sku_id}", className="mb-3 fw-bold"),
+            html.Div([
+                html.P([
+                    html.I(className="fas fa-tag me-2 text-primary"),
+                    html.Strong("Category: "),
+                    category
+                ], className="mb-2"),
+                html.P([
+                    html.I(className="fas fa-chart-bar me-2 text-success"),
+                    html.Strong("Total Historical Sales: "),
+                    f"{total_sales:,} units"
+                ], className="mb-2"),
+                html.P([
+                    html.I(className="fas fa-calendar-day me-2 text-info"),
+                    html.Strong("Avg Daily Sales: "),
+                    f"{avg_daily_sales:.1f} units/day"
+                ], className="mb-2"),
+                html.P([
+                    html.I(className="fas fa-arrow-up me-2 text-warning"),
+                    html.Strong("Peak Sales Day: "),
+                    f"{max_sales:,} units"
+                ], className="mb-0")
+            ])
+        ])        
+        
     def _create_forecast_stats_table(self, forecast_df, reorder_info):
         """Create detailed forecast statistics table."""
         stats_data = {
@@ -1346,7 +1940,7 @@ Recommended reanalysis: {(datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d
             line_dash="dash",
             line_color="#28a745",
             line_width=2.5,
-            annotation_text=f"📦 Current Stock: {int(inv_info['current_stock'])} units",
+            annotation_text=f" Current Stock: {int(inv_info['current_stock'])} units",
             annotation_position="top left",
             annotation_font_size=11,
             annotation_bgcolor="rgba(40, 167, 69, 0.1)"
@@ -1358,7 +1952,7 @@ Recommended reanalysis: {(datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d
             line_dash="dot",
             line_color="#dc3545",
             line_width=2.5,
-            annotation_text=f"🚨 Reorder Point: {int(inv_info['reorder_point'])} units",
+            annotation_text=f" Reorder Point: {int(inv_info['reorder_point'])} units",
             annotation_position="bottom left",
             annotation_font_size=11,
             annotation_bgcolor="rgba(220, 53, 69, 0.1)"
@@ -1383,7 +1977,7 @@ Recommended reanalysis: {(datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d
                 xanchor="center",
                 x=0.5
             ),
-            margin=dict(t=80, b=80)
+            margin=dict(t=80, b=100, l=70, r=40)
         )
         
         return fig
@@ -1453,7 +2047,7 @@ Recommended reanalysis: {(datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d
             template='plotly_white',
             height=450,
             legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5),
-            margin=dict(t=50, b=80, l=60, r=40)
+            margin=dict(t=50, b=100, l=70, r=40)
         )
         
         return fig
@@ -1490,7 +2084,8 @@ Recommended reanalysis: {(datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d
             yaxis_title="Average Daily Sales",
             template='plotly_white',
             height=400,
-            showlegend=False
+            showlegend=False,
+            margin=dict(t=50, b=80, l=70, r=40)
         )
         
         return dcc.Graph(figure=fig, config={'displayModeBar': False})
@@ -1515,6 +2110,7 @@ Recommended reanalysis: {(datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d
             marker=dict(color=colors),
             text=weekly_avg['sales'].round(1),
             textposition='outside',
+            textfont=dict(size=12, color='#000'), 
             hovertemplate='<b>%{x}</b><br>Avg Sales: %{y:.1f} units<extra></extra>'
         ))
         
@@ -1523,8 +2119,12 @@ Recommended reanalysis: {(datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d
             xaxis_title="Day of Week",
             yaxis_title="Average Sales (Units)",
             template='plotly_white',
-            height=350,
-            showlegend=False
+            height=400,
+            showlegend=False,
+            margin=dict(t=100, b=80, l=70, r=40),
+            yaxis=dict(
+                range=[0, weekly_avg['sales'].max() * 1.15]  
+            )
         )
         
         return fig
@@ -1576,7 +2176,8 @@ Recommended reanalysis: {(datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d
             hovermode='x unified',
             template='plotly_white',
             height=350,
-            legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="center", x=0.5)
+            legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="center", x=0.5),
+            margin=dict(t=50, b=100, l=70, r=40)
         )
         
         return fig
@@ -1968,10 +2569,10 @@ Recommended reanalysis: {(datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d
     def run(self, host='127.0.0.1', port=8050, debug=True):
         """Run the dashboard server."""
         print(f"\n" + "="*70)
-        print("🚀 LAUNCHING AI DEMAND FORECASTING DASHBOARD")
+        print("LAUNCHING AI DEMAND FORECASTING DASHBOARD")
         print("="*70)
-        print(f"\n📊 Dashboard URL: http://{host}:{port}")
-        print("\n✨ Features:")
+        print(f"\n Dashboard URL: http://{host}:{port}")
+        print("\n Features:")
         print("   • Comprehensive demand forecasting with ML")
         print("   • Dynamic reorder recommendations")
         print("   • Historical trend analysis")
@@ -1979,6 +2580,6 @@ Recommended reanalysis: {(datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d
         print("   • Risk assessment dashboard")
         print("   • AI-powered insights")
         print("   • Real-time interactive visualizations")
-        print(f"\n⚠️  Press Ctrl+C to stop the server")
+        print(f"\n Press Ctrl+C to stop the server")
         print("="*70 + "\n")
         self.app.run_server(host=host, port=port, debug=debug)

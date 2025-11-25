@@ -225,10 +225,10 @@ class SupplierPerformanceTracker:
                 actions.append(f"⚠️ Quality concerns - Implement improvement plan")
             
             if supplier['performance_score'] < 60:
-                actions.append(f"🚨 Overall performance poor - Consider alternative suppliers")
+                actions.append(f" Overall performance poor - Consider alternative suppliers")
             
             if supplier['performance_score'] >= 90:
-                actions.append(f"✅ Excellent performance - Consider expanding relationship")
+                actions.append(f" Excellent performance - Consider expanding relationship")
             
             if actions:
                 recommendations.append({

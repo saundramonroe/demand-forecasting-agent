@@ -46,12 +46,12 @@ def generate_sample_customers(sales_df, n_customers=500):
 
 def main():
     print("\n" + "="*70)
-    print("🏪 ADVANCED RETAIL DEMAND FORECASTING SYSTEM")
+    print(" ADVANCED RETAIL DEMAND FORECASTING SYSTEM")
     print("   with Supplier Tracking & Customer Segmentation")
     print("="*70 + "\n")
     
     # Step 1: Generate retail data
-    print("📊 Step 1/6: Generating retail sales data...")
+    print(" Step 1/6: Generating retail sales data...")
     
     start_date = '2022-01-01'
     end_date = datetime.now().strftime('%Y-%m-%d')
@@ -72,12 +72,12 @@ def main():
     print(f"\n✓ Generated {len(sales_df):,} sales records")
     
     # Step 2: Add customer data
-    print("\n👥 Step 2/6: Adding customer transaction data...")
+    print("\n Step 2/6: Adding customer transaction data...")
     sales_with_customers = generate_sample_customers(sales_df, n_customers=500)
     print(f"✓ Added {sales_with_customers['customer_id'].nunique()} unique customers")
     
     # Step 3: Initialize customer segmentation
-    print("\n📊 Step 3/6: Performing customer segmentation...")
+    print("\n Step 3/6: Performing customer segmentation...")
     segmentation_analyzer = CustomerSegmentationAnalyzer()
     
     # RFM Analysis
@@ -97,7 +97,7 @@ def main():
     print(f"✓ Saved: data/customer_segments.csv")
     
     # Step 4: Initialize supplier tracking
-    print("\n📦 Step 4/6: Initializing supplier performance tracking...")
+    print("\n Step 4/6: Initializing supplier performance tracking...")
     supplier_tracker = SupplierPerformanceTracker()
     
     # Add suppliers
@@ -139,7 +139,7 @@ def main():
     print(f"✓ Supplier performance report saved: data/supplier_performance.csv")
     
     # Step 5: Prepare data for forecasting
-    print("\n🤖 Step 5/6: Preparing data and initializing forecasting agent...")
+    print("\n Step 5/6: Preparing data and initializing forecasting agent...")
     inventory_df = generator.generate_retail_inventory_snapshot(sales_df)
     
     sales_agg = sales_df.groupby(['date', 'sku_id', 'category']).agg({
@@ -156,8 +156,19 @@ def main():
         'promotion_active': 'mean'
     }).reset_index()
     
+    # Prepare inventory summary for dashboard
+    inv_summary = inventory_df.groupby('sku_id').agg({
+        'current_stock': 'sum',
+        'reorder_point': 'mean',
+        'reorder_quantity': 'mean',
+        'lead_time_days': 'mean',
+        'unit_cost': 'first',
+        'unit_price': 'first',
+        'category': 'first'
+    }).reset_index()
+    
     agent = DemandForecastingAgent()
-    print("✓ Agent initialized")
+    print(" Agent initialized")
     
     # Step 6: Train models
     print("\n🎓 Step 6/6: Training forecasting models...")
@@ -173,42 +184,80 @@ def main():
     
     print("\n✓ Model training complete")
     
-    # Prepare inventory for dashboard
-    inv_summary = inventory_df.groupby('sku_id').agg({
-        'current_stock': 'sum',
-        'reorder_point': 'mean',
-        'reorder_quantity': 'mean',
-        'lead_time_days': 'mean',
-        'unit_cost': 'first',
-        'unit_price': 'first',
-        'category': 'first'
-    }).reset_index()
+    # Pre-calculate urgent reorders for all SKUs
+    print("\n  Calculating urgent reorders for all trained SKUs...")
+    print(f"   Total SKUs in inventory: {len(inv_summary)}")
+    print(f"   Trained models: {len(agent.models)}")
+    
+    urgent_skus = []
+    
+    for sku in inv_summary['sku_id'].unique():
+        if sku in agent.models:
+            try:
+                future = pd.date_range(start=datetime.now(), periods=30, freq='D')
+                fcast = agent.predict_demand(sku, future, external_df)
+                inv = inv_summary[inv_summary['sku_id'] == sku].iloc[0]
+                
+                reorder_check = agent.calculate_dynamic_reorder(
+                    sku, fcast, int(inv['current_stock']), int(inv['lead_time_days'])
+                )
+                
+                print(f"   {sku}: {reorder_check['urgency']} - {reorder_check['days_until_stockout']} days to stockout")
+                
+                if reorder_check['urgency'] == 'HIGH':
+                    urgent_skus.append(sku)
+                    print(f"       MARKED AS URGENT")
+            except Exception as e:
+                print(f"   {sku}: Error - {e}")
+        else:
+            print(f"   {sku}: Not trained yet (skipping)")
+    
+    print(f"\n✓ Urgent reorder calculation complete")
+    print(f"✓ Found {len(urgent_skus)} SKUs with HIGH urgency: {urgent_skus}")
+    
+    # Save urgent list for dashboard
+    urgent_reorder_count = len(urgent_skus)
+    print(f"✓ Urgent count set to: {urgent_reorder_count}")
     
     # Save analytics results
-    print("\n💾 Saving analytics results...")
+    print("\n Saving analytics results...")
     print("✓ data/customer_segments.csv")
     print("✓ data/supplier_performance.csv")
     
+    # Debug: Check data
+    print(f"\n DEBUG: Checking data for dashboard...")
+    print(f"   Customer segments: {len(rfm_df) if rfm_df is not None else 0} records")
+    print(f"   Supplier performance: {len(supplier_performance) if supplier_performance is not None else 0} records")
+    print(f"   Segments preview:")
+    if rfm_df is not None and len(rfm_df) > 0:
+        print(rfm_df['segment'].value_counts().head())
+    
     # Launch dashboard
     print("\n" + "="*70)
-    print("🚀 LAUNCHING ADVANCED DASHBOARD")
+    print(" LAUNCHING ADVANCED DASHBOARD")
     print("="*70)
-    print("\n📈 Dashboard URL: http://127.0.0.1:8050")
-    print("\n✨ Advanced Features Enabled:")
+    print("\n Dashboard URL: http://127.0.0.1:8050")
+    print("\n Advanced Features Enabled:")
     print("   • Real-time demand forecasting")
     print("   • Dynamic reorder recommendations")
-    print("   • Customer segmentation (RFM analysis)")
-    print("   • Supplier performance tracking")
+    print(f"   • Customer segmentation ({len(rfm_df) if rfm_df is not None else 0} customers)")
+    print(f"   • Supplier performance tracking ({len(supplier_performance) if supplier_performance is not None else 0} suppliers)")
     print("   • Risk assessment dashboard")
     print("   • AI-powered insights")
-    print("\n📊 Analytics Available:")
+    print("\n Analytics Available:")
     print(f"   • {sales_with_customers['customer_id'].nunique()} customers segmented")
     print(f"   • {len(suppliers)} suppliers tracked")
     print(f"   • {len(supplier_tracker.deliveries)} deliveries analyzed")
-    print("\n⚠️  Press Ctrl+C to stop the server")
+    print("\n  Press Ctrl+C to stop the server")
     print("="*70 + "\n")
     
     # Pass all data to dashboard including analytics
+    print(" Passing data to dashboard...")
+    print(f"   - Sales data: {len(sales_agg):,} records")
+    print(f"   - Customer segments: {len(rfm_df) if rfm_df is not None else 0} customers")
+    print(f"   - Supplier metrics: {len(supplier_performance) if supplier_performance is not None else 0} suppliers")
+    print(f"   - Urgent reorders: {urgent_reorder_count}\n")
+    
     dashboard = ForecastingDashboard(
         agent, 
         sales_agg, 
@@ -217,16 +266,24 @@ def main():
         customer_segments=rfm_df,
         supplier_performance=supplier_performance
     )
+    print("RFM DF CHECK:")
+    print(type(rfm_df))
+    print(rfm_df.head())
+    print("Rows:", len(rfm_df))
+    print("Columns:", rfm_df.columns.tolist())
+    # Store urgent count in dashboard
+    dashboard.urgent_reorder_count = urgent_reorder_count
+    
     dashboard.run(host='127.0.0.1', port=8050, debug=False)
 
 if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("\n\n👋 Dashboard stopped. Goodbye!")
+        print("\n\nDashboard stopped. Goodbye!")
         sys.exit(0)
     except Exception as e:
-        print(f"\n❌ Error: {e}")
+        print(f"\n Error: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

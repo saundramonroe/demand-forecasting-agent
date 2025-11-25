@@ -66,14 +66,14 @@ def load_latest_data():
 
 def main():
     print("\n" + "="*70)
-    print("⏰ AUTOMATED FORECAST SCHEDULER")
+    print(" AUTOMATED FORECAST SCHEDULER")
     print("="*70 + "\n")
     
     # Load configuration
     config_path = 'config/notification_config.json'
     
     if not os.path.exists(config_path):
-        print("⚠️  Configuration file not found. Creating default config...")
+        print("  Configuration file not found. Creating default config...")
         os.makedirs('config', exist_ok=True)
         
         default_config = {
@@ -96,21 +96,21 @@ def main():
     with open(config_path, 'r') as f:
         config = json.load(f)
     
-    print(f"📧 Email Notifications: {'ENABLED ✓' if config.get('enabled') else 'DISABLED'}")
-    print(f"⏰ Schedule Time: {config.get('schedule_time', '09:00')} daily")
+    print(f" Email Notifications: {'ENABLED ✓' if config.get('enabled') else 'DISABLED'}")
+    print(f" Schedule Time: {config.get('schedule_time', '09:00')} daily")
     print()
     
     # Initialize components
-    print("🤖 Initializing forecasting agent...")
+    print(" Initializing forecasting agent...")
     agent = DemandForecastingAgent()
     
-    print("📊 Initializing automated scheduler...")
+    print(" Initializing automated scheduler...")
     scheduler = AutomatedForecastScheduler(agent, load_latest_data, config)
     
     print("✓ Initialization complete\n")
     
     # Start scheduler
-    print("🚀 Starting automated forecast scheduler...")
+    print(" Starting automated forecast scheduler...")
     print("\nScheduler will:")
     print("  1. Run immediately (initial forecast)")
     print(f"  2. Run daily at {config.get('schedule_time', '09:00')}")
@@ -125,10 +125,10 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("\n\n👋 Scheduler stopped. Goodbye!")
+        print("\n\n Scheduler stopped. Goodbye!")
         sys.exit(0)
     except Exception as e:
-        print(f"\n❌ Error: {e}")
+        print(f"\n Error: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

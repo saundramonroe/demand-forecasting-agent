@@ -1,0 +1,11 @@
+{
+  "enabled": false,
+  "sender_email": "your-email@gmail.com",
+  "sender_password": "your-app-password",
+  "recipient_emails": [
+    "inventory@yourcompany.com"
+  ],
+  "smtp_server": "smtp.gmail.com",
+  "smtp_port": 587,
+  "schedule_time": "09:00"
+}

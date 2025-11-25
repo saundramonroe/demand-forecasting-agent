@@ -35,12 +35,12 @@ class AutomatedForecastScheduler:
     def run_daily_forecast(self):
         """Execute daily forecast for all SKUs."""
         print(f"\n{'='*70}")
-        print(f"🤖 AUTOMATED DAILY FORECAST - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f" AUTOMATED DAILY FORECAST - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         print(f"{'='*70}\n")
         
         try:
             # Load latest data
-            print("📊 Loading latest sales data...")
+            print(" Loading latest sales data...")
             sales_df, external_df, inventory_df = self.data_loader()
             print(f"✓ Loaded {len(sales_df):,} sales records")
             
@@ -49,7 +49,7 @@ class AutomatedForecastScheduler:
             urgent_reorders = []
             
             skus = sales_df['sku_id'].unique()
-            print(f"\n🎯 Generating forecasts for {len(skus)} SKUs...")
+            print(f"\n Generating forecasts for {len(skus)} SKUs...")
             
             for i, sku in enumerate(skus, 1):
                 try:
@@ -123,7 +123,7 @@ class AutomatedForecastScheduler:
             })
             
             print(f"\n{'='*70}")
-            print(f"✅ DAILY FORECAST COMPLETE")
+            print(f" DAILY FORECAST COMPLETE")
             print(f"{'='*70}")
             print(f"   Total SKUs: {len(skus)}")
             print(f"   Successful Forecasts: {len(all_forecasts)}")
@@ -134,7 +134,7 @@ class AutomatedForecastScheduler:
             return all_forecasts
             
         except Exception as e:
-            print(f"❌ Error in daily forecast: {e}")
+            print(f" Error in daily forecast: {e}")
             import traceback
             traceback.print_exc()
             return []
@@ -158,7 +158,7 @@ class AutomatedForecastScheduler:
     def _send_urgent_alerts(self, urgent_reorders):
         """Send email alerts for urgent reorders."""
         if not self.notification_config.get('enabled', False):
-            print("\n⚠️  Email notifications disabled. Enable in config to send alerts.")
+            print("\n  Email notifications disabled. Enable in config to send alerts.")
             return
         
         try:
@@ -167,7 +167,7 @@ class AutomatedForecastScheduler:
             recipients = self.notification_config['recipient_emails']
             password = self.notification_config['sender_password']
             
-            subject = f"🚨 URGENT: {len(urgent_reorders)} SKUs Require Immediate Reordering"
+            subject = f" URGENT: {len(urgent_reorders)} SKUs Require Immediate Reordering"
             
             # Create HTML email body
             body = self._create_alert_email(urgent_reorders)
@@ -212,7 +212,7 @@ class AutomatedForecastScheduler:
         </head>
         <body>
             <div class="header">
-                <h1>🚨 Urgent Reorder Alert</h1>
+                <h1> Urgent Reorder Alert</h1>
                 <p>Automated Demand Forecasting System - {datetime.now().strftime('%Y-%m-%d %H:%M')}</p>
             </div>
             
@@ -252,7 +252,7 @@ class AutomatedForecastScheduler:
             </table>
             
             <div style="margin: 20px; padding: 15px; background-color: #e7f3ff; border-radius: 5px;">
-                <h3>📊 Summary</h3>
+                <h3> Summary</h3>
                 <ul>
                     <li>Total urgent reorders: {}</li>
                     <li>Recommended action: Review and place orders immediately</li>
@@ -278,11 +278,11 @@ class AutomatedForecastScheduler:
             schedule_time: Time to run daily (24-hour format, e.g., "09:00")
         """
         print(f"\n{'='*70}")
-        print(f"⏰ STARTING AUTOMATED FORECAST SCHEDULER")
+        print(f" STARTING AUTOMATED FORECAST SCHEDULER")
         print(f"{'='*70}")
-        print(f"\n📅 Schedule: Daily at {schedule_time}")
-        print(f"🔔 Alerts: {'Enabled' if self.notification_config.get('enabled') else 'Disabled'}")
-        print(f"\n⚠️  Press Ctrl+C to stop the scheduler")
+        print(f"\nSchedule: Daily at {schedule_time}")
+        print(f" Alerts: {'Enabled' if self.notification_config.get('enabled') else 'Disabled'}")
+        print(f"\n Press Ctrl+C to stop the scheduler")
         print(f"{'='*70}\n")
         
         # Schedule daily forecast
