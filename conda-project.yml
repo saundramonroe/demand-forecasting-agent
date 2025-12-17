@@ -1,0 +1,121 @@
+name: supply-chain-sam
+channels:
+  - defaults
+  - https://repo.anaconda.cloud/repo/community
+  - https://repo.anaconda.cloud/repo/conda-forge
+  - https://repo.anaconda.com/pkgs/main
+  - https://repo.anaconda.cloud/repo/rko-demo/pytorch
+  - https://repo.anaconda.cloud/repo/main
+
+platforms:
+  - osx-arm64
+
+dependencies:
+  - python=3.10
+  - pandas>=2.0.0
+  - numpy>=1.24.0
+  - scipy>=1.11.0
+  - scikit-learn>=1.3.0
+  - xgboost>=2.0.0
+  - lightgbm>=4.0.0
+  - statsmodels>=0.14.0
+  - prophet>=1.1.0
+  - plotly>=5.17.0
+  - matplotlib>=3.8.0
+  - seaborn>=0.13.0
+  - flask>=3.0.0
+  - dash>=2.14.0
+  - dash-bootstrap-components>=1.5.0
+  - jupyter>=1.0.0
+  - jupyterlab>=4.0.0
+  - notebook>=7.0.0
+  - ipywidgets>=8.0.0
+  - pytest>=7.4.0
+  - black>=23.7.0
+  - pylint>=3.0.0
+  - requests>=2.31.0
+  - python-dotenv>=1.0.0
+  - pyyaml>=6.0.0
+  - schedule>=1.2.0
+  - pip>=23.0
+  - setuptools>=68.0
+  - wheel
+
+environments:
+  default:
+    - python=3.10
+    - pandas
+    - numpy
+    - scikit-learn
+    - xgboost
+    - lightgbm
+    - statsmodels
+    - prophet
+    - plotly
+    - dash
+    - dash-bootstrap-components
+    - flask
+    - requests
+    - python-dotenv
+    - pyyaml
+    - schedule
+  dev:
+    - python=3.10
+    - pandas
+    - numpy
+    - scikit-learn
+    - xgboost
+    - lightgbm
+    - statsmodels
+    - prophet
+    - plotly
+    - matplotlib
+    - seaborn
+    - dash
+    - dash-bootstrap-components
+    - flask
+    - jupyter
+    - jupyterlab
+    - notebook
+    - ipywidgets
+    - pytest
+    - black
+    - pylint
+    - requests
+    - python-dotenv
+    - pyyaml
+    - schedule
+  prod:
+    - python=3.10
+    - pandas
+    - numpy
+    - scikit-learn
+    - xgboost
+    - lightgbm
+    - statsmodels
+    - prophet
+    - plotly
+    - dash
+    - dash-bootstrap-components
+    - flask
+    - requests
+    - python-dotenv
+    - schedule
+
+variables:
+  QWEN_API_URL: http://localhost:11434/api/generate
+  QWEN_MODEL: qwen2.5:7b
+  DATA_DIR: ./data
+  LOG_LEVEL: INFO
+  DASH_HOST: 127.0.0.1
+  DASH_PORT: "8050"
+  DASH_DEBUG: "false"
+
+commands:
+  dashboard: python scripts/run_dashboard.py
+  scheduler: python scripts/run_scheduler.py
+  test: pytest tests/ -v
+  generate-data: python scripts/generate_sample_data.py
+  notebook: jupyter lab --no-browser
+  lint: black src/ tests/ scripts/ && pylint src/
+  format: black src/ tests/ scripts/
