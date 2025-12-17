@@ -117,6 +117,7 @@ dependencies:
   - threadpoolctl=3.5.0=py313h7eb115d_1
   - tk=8.6.15=hcd8a7d5_0
   - tomlkit=0.13.3=py313hca03da5_0
+  - transformers>=4.35.0=4.35.2=py313hca03da5_0
   - trove-classifiers=2025.5.9.12=py313hca03da5_0
   - typing-extensions=4.15.0=py313hca03da5_0
   - typing-inspection=0.4.2=py313hca03da5_0
